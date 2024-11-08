@@ -193,7 +193,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     // (2.4.1) Collect predicates with uncorrelated subqueries that are part of each chain in a new "pseudo" chain. When
     //         we want to use them for pruning during execution, it is safe to add the chunks pruned by them to the
     //         already pruned chunks.
-    const auto chain_count = predicate_pruning_chains.size();
+    /*const auto chain_count = predicate_pruning_chains.size();
     auto chain_count_per_subquery_predicate = std::unordered_map<std::shared_ptr<PredicateNode>, uint64_t>{};
     auto prunable_subquery_predicates = std::vector<std::weak_ptr<AbstractLQPNode>>{};
     for (const auto& predicate_chain : predicate_pruning_chains) {
@@ -228,7 +228,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     // (2.4.2) Set the predicates that might be used for pruning during execution.
     if (!prunable_subquery_predicates.empty()) {
       stored_table_node->set_prunable_subquery_predicates(prunable_subquery_predicates);
-    }
+    }*/
   }
 }
 

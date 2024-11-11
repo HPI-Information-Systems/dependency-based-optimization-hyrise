@@ -56,43 +56,43 @@ int pr_drange PROTO((int tbl, DSS_HUGE min, DSS_HUGE cnt, long num));
 FILE *
 print_prep(int table, int update)
 {
-	char upath[128];
-	FILE *res;
+    char upath[128];
+    FILE *res;
 
-	if (updates)
-		{
-		if (update > 0) /* updates */
-			if ( insert_segments )
-				{
-				int this_segment;
-				if(strcmp(tdefs[table].name,"orders.tbl"))
-					this_segment=++insert_orders_segment;
-				else 
-					this_segment=++insert_lineitem_segment;
-				sprintf(upath, "%s%c%s.u%d.%d", 
-					env_config(PATH_TAG, PATH_DFLT),
-					PATH_SEP, tdefs[table].name, update%10000,this_segment);
-				}
-			else
-				{
-				sprintf(upath, "%s%c%s.u%d",
-				env_config(PATH_TAG, PATH_DFLT),
-				PATH_SEP, tdefs[table].name, update);
-				}
-		else /* deletes */
-			if ( delete_segments )
-				{
-				++delete_segment;
-				sprintf(upath, "%s%cdelete.u%d.%d",
-					env_config(PATH_TAG, PATH_DFLT), PATH_SEP, -update%10000,
-					delete_segment);
-				}
-			else
-				{
-				sprintf(upath, "%s%cdelete.%d",
-				env_config(PATH_TAG, PATH_DFLT), PATH_SEP, -update);
-				}
-		return(fopen(upath, "w"));
+    if (updates)
+        {
+        if (update > 0) /* updates */
+            if ( insert_segments )
+                {
+                int this_segment;
+                if(strcmp(tdefs[table].name,"orders.tbl"))
+                    this_segment=++insert_orders_segment;
+                else
+                    this_segment=++insert_lineitem_segment;
+                sprintf(upath, "%s%c%s.u%d.%d",
+                    env_config(PATH_TAG, PATH_DFLT),
+                    PATH_SEP, tdefs[table].name, update%10000,this_segment);
+                }
+            else
+                {
+                sprintf(upath, "%s%c%s.u%d",
+                env_config(PATH_TAG, PATH_DFLT),
+                PATH_SEP, tdefs[table].name, update);
+                }
+        else /* deletes */
+            if ( delete_segments )
+                {
+                ++delete_segment;
+                sprintf(upath, "%s%cdelete.u%d.%d",
+                    env_config(PATH_TAG, PATH_DFLT), PATH_SEP, -update%10000,
+                    delete_segment);
+                }
+            else
+                {
+                sprintf(upath, "%s%cdelete.%d",
+                env_config(PATH_TAG, PATH_DFLT), PATH_SEP, -update);
+                }
+        return(fopen(upath, "w"));
         }
     res = tbl_open(table, "w");
     OPEN_CHECK(res, tdefs[table].name);
@@ -102,59 +102,60 @@ print_prep(int table, int update)
 int
 dbg_print(int format, FILE *target, void *data, int len, int sep)
 {
-	int dollars,
-		cents;
+    int dollars,
+        cents;
 
-	switch(format)
-	{
-	case DT_STR:
-		fprintf(target, "%s", (char *)data);
-		break;
+    switch(format)
+    {
+    case DT_STR:
+        fprintf(target, "%s", (char *)data);
+        break;
 #ifdef MVS
-	case DT_VSTR:
-		/* note: only used in MVS, assumes columnar output */
-		fprintf(target, "%c%c%-*s", 
-			(len >> 8) & 0xFF, len & 0xFF, len, (char *)data);
-		break;
+    case DT_VSTR:
+        /* note: only used in MVS, assumes columnar output */
+        fprintf(target, "%c%c%-*s",
+            (len >> 8) & 0xFF, len & 0xFF, len, (char *)data);
+        break;
 #endif /* MVS */
-	case DT_INT:
-		fprintf(target, "%ld", (long)data);
-		break;
-	case DT_HUGE:
-		fprintf(target, HUGE_FORMAT, *(DSS_HUGE *)data);
-		break;
-	case DT_KEY:
-		fprintf(target, "%ld", (long)data);
-		break;
-	case DT_MONEY:
-		cents = (int)*(DSS_HUGE *)data;
-		if (cents < 0)
-			{
-			fprintf(target, "-");
-			cents = -cents;
-			}
-		dollars = cents / 100;
-		cents %= 100;
-		fprintf(target, "%d.%02d", dollars, cents);
-		break;
-	case DT_CHR:
-		fprintf(target, "%c", *(char *)data);
-		break;
-	}
+    case DT_INT:
+        fprintf(target, "%ld", (long)data);
+        break;
+    case DT_HUGE:
+        fprintf(target, HUGE_FORMAT, *(DSS_HUGE *)data);
+        break;
+    case DT_KEY:
+        fprintf(target, "%ld", (long)data);
+        break;
+    case DT_MONEY:
+        cents = (int)*(DSS_HUGE *)data;
+        if (cents < 0)
+            {
+            fprintf(target, "-");
+            cents = -cents;
+            }
+        dollars = cents / 100;
+        cents %= 100;
+        fprintf(target, "%d.%02d", dollars, cents);
+        break;
+    case DT_CHR:
+        fprintf(target, "%c", *(char *)data);
+        break;
+    }
 
 #ifdef EOL_HANDLING
-	if (sep)
+    if (sep)
 #endif /* EOL_HANDLING */
-	fprintf(target, "%c", SEPARATOR);
-	
-	return(0);
+    fprintf(target, "%c", SEPARATOR);
+
+    return(0);
 }
 
 int
-pr_cust(customer_t *c, int mode)
+pr_cust(void *t, int mode)
 {
-static FILE *fp = NULL;
-        
+   static FILE *fp = NULL;
+   customer_t *c = (customer_t *) t;
+
    if (fp == NULL)
         fp = print_prep(CUST, 0);
 
@@ -176,17 +177,18 @@ static FILE *fp = NULL;
 }
 
 /*
- * print the numbered order 
+ * print the numbered order
  */
 int
-pr_order(order_t *o, int mode)
+pr_order(void *t, int mode)
 {
     static FILE *fp_o = NULL;
     static int last_mode = 0;
-        
+    order_t *o = (order_t *) t;
+
     if (fp_o == NULL || mode != last_mode)
         {
-        if (fp_o) 
+        if (fp_o)
             fclose(fp_o);
         fp_o = print_prep(ORDER, mode);
         last_mode = mode;
@@ -210,15 +212,16 @@ pr_order(order_t *o, int mode)
  * print an order's lineitems
  */
 int
-pr_line(order_t *o, int mode)
+pr_line(void *t, int mode)
 {
     static FILE *fp_l = NULL;
     static int last_mode = 0;
     long      i;
-        
+    order_t *o = (order_t *) t;
+
     if (fp_l == NULL || mode != last_mode)
         {
-        if (fp_l) 
+        if (fp_l)
             fclose(fp_l);
         fp_l = print_prep(LINE, mode);
         last_mode = mode;
@@ -253,7 +256,7 @@ pr_line(order_t *o, int mode)
  * print the numbered order *and* its associated lineitems
  */
 int
-pr_order_line(order_t *o, int mode)
+pr_order_line(void *o, int mode)
 {
     tdefs[ORDER].name = tdefs[ORDER_LINE].name;
     pr_order(o, mode);
@@ -266,9 +269,10 @@ pr_order_line(order_t *o, int mode)
  * print the given part
  */
 int
-pr_part(part_t *part, int mode)
+pr_part(void *t, int mode)
 {
-static FILE *p_fp = NULL;
+    static FILE *p_fp = NULL;
+    part_t *part = (part_t *) t;
 
     if (p_fp == NULL)
         p_fp = print_prep(PART, 0);
@@ -292,10 +296,11 @@ static FILE *p_fp = NULL;
  * print the given part's suppliers
  */
 int
-pr_psupp(part_t *part, int mode)
+pr_psupp(void *t, int mode)
 {
     static FILE *ps_fp = NULL;
     long      i;
+    part_t *part = (part_t *) t;
 
     if (ps_fp == NULL)
         ps_fp = print_prep(PSUPP, mode);
@@ -318,7 +323,7 @@ pr_psupp(part_t *part, int mode)
  * print the given part *and* its suppliers
  */
 int
-pr_part_psupp(part_t *part, int mode)
+pr_part_psupp(void *part, int mode)
 {
     tdefs[PART].name = tdefs[PART_PSUPP].name;
     pr_part(part, mode);
@@ -328,10 +333,11 @@ pr_part_psupp(part_t *part, int mode)
 }
 
 int
-pr_supp(supplier_t *supp, int mode)
+pr_supp(void *t, int mode)
 {
-static FILE *fp = NULL;
-        
+   static FILE *fp = NULL;
+   supplier_t *supp = (supplier_t *) t;
+
    if (fp == NULL)
         fp = print_prep(SUPP, mode);
 
@@ -349,10 +355,11 @@ static FILE *fp = NULL;
 }
 
 int
-pr_nation(code_t *c, int mode)
+pr_nation(void *t, int mode)
 {
-static FILE *fp = NULL;
-        
+   static FILE *fp = NULL;
+   code_t *c = (code_t *) t;
+
    if (fp == NULL)
         fp = print_prep(NATION, mode);
 
@@ -367,10 +374,11 @@ static FILE *fp = NULL;
 }
 
 int
-pr_region(code_t *c, int mode)
+pr_region(void *t, int mode)
 {
-static FILE *fp = NULL;
-        
+   static FILE *fp = NULL;
+   code_t *c = (code_t *) t;
+
    if (fp == NULL)
         fp = print_prep(REGION, mode);
 
@@ -383,7 +391,7 @@ static FILE *fp = NULL;
    return(0);
 }
 
-/* 
+/*
  * NOTE: this routine does NOT use the BCD2_* routines. As a result,
  * it WILL fail if the keys being deleted exceed 32 bits. Since this
  * would require ~660 update iterations, this seems an acceptable
@@ -397,8 +405,8 @@ pr_drange(int tbl, DSS_HUGE min, DSS_HUGE cnt, long num)
     DSS_HUGE child = -1;
     DSS_HUGE start, last, new;
 
-	static DSS_HUGE rows_per_segment=0;
-	static DSS_HUGE rows_this_segment=0;
+    static DSS_HUGE rows_per_segment=0;
+    static DSS_HUGE rows_this_segment=0;
 
     if (last_num != num)
         {
@@ -408,34 +416,34 @@ pr_drange(int tbl, DSS_HUGE min, DSS_HUGE cnt, long num)
         if (dfp == NULL)
             return(-1);
         last_num = num;
-		rows_this_segment=0;
+        rows_this_segment=0;
         }
 
     start = MK_SPARSE(min, num/ (10000 / UPD_PCT));
     last = start - 1;
     for (child=min; cnt > 0; child++, cnt--)
-	{
-		new = MK_SPARSE(child, num/ (10000 / UPD_PCT));
-		if (delete_segments)
-		{
+    {
+        new = MK_SPARSE(child, num/ (10000 / UPD_PCT));
+        if (delete_segments)
+        {
 
-			if(rows_per_segment==0) 
-				rows_per_segment = (cnt / delete_segments) + 1;
-			if((++rows_this_segment) > rows_per_segment)
-			{
-				fclose(dfp);
-				dfp = print_prep(tbl, -num);
-				if (dfp == NULL) return(-1);
-				last_num = num;
-				rows_this_segment=1;
-			}
-		}
-		PR_STRT(dfp);
-		PR_HUGE(dfp, &new);
-		PR_END(dfp);
-		start = new;
-		last = new;
-	}
+            if(rows_per_segment==0)
+                rows_per_segment = (cnt / delete_segments) + 1;
+            if((++rows_this_segment) > rows_per_segment)
+            {
+                fclose(dfp);
+                dfp = print_prep(tbl, -num);
+                if (dfp == NULL) return(-1);
+                last_num = num;
+                rows_this_segment=1;
+            }
+        }
+        PR_STRT(dfp);
+        PR_HUGE(dfp, &new);
+        PR_END(dfp);
+        start = new;
+        last = new;
+    }
     
     return(0);
 }

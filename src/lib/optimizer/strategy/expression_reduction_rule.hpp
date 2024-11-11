@@ -61,6 +61,11 @@ class ExpressionReductionRule : public AbstractRule {
                                          const std::shared_ptr<AbstractLQPNode>& aggregate_node,
                                          const std::shared_ptr<AbstractLQPNode>& root_node);
 
+  /**
+   * Rewrite `a (NOT) IN ('abc')` to `a (Not)Equals 'abc'`.
+   */
+  static void unnest_unary_in_expression(std::shared_ptr<AbstractExpression>& input_expression);
+
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };

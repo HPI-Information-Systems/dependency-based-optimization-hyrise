@@ -74,13 +74,17 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
       // Determine which node to use for Semi-Join-filtering and check for the required uniqueness guarantees.
       if (*join_node->prunable_input_side() == LQPInputSide::Left &&
           join_node->left_input()->has_matching_ucc(equals_predicate_expressions_left)) {
+        // std::cout << "O2: rewrite " << join_node->description();
         join_node->join_mode = JoinMode::Semi;
         const auto temp = join_node->left_input();
         join_node->set_left_input(join_node->right_input());
         join_node->set_right_input(temp);
+        // std::cout << " to " << join_node->description() << "\n";
       } else if (*join_node->prunable_input_side() == LQPInputSide::Right &&
                  join_node->right_input()->has_matching_ucc(equals_predicate_expressions_right)) {
+        // std::cout << "O2: rewrite " << join_node->description();
         join_node->join_mode = JoinMode::Semi;
+        // std::cout << " to " << join_node->description() << "\n";
       }
     }
 

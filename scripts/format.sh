@@ -19,7 +19,7 @@ elif [ "$1" = "staged" ]; then
     git diff --diff-filter=d --cached --name-only | grep -E "^src.*\.[chi]pp$" | xargs -I{} sh -c "${format_cmd}"
 else
     # Run on all changed as well as untracked cpp/hpp files, as compared to the current master. Skip deleted files.
-    { git diff --diff-filter=d --name-only master & git ls-files --others --exclude-standard; } | grep -E "^src.*\.[chi]pp$" | xargs -I{} sh -c "${format_cmd}"
+    { git diff --diff-filter=d --name-only main & git ls-files --others --exclude-standard; } | grep -E "^src.*\.[chi]pp$" | xargs -I{} sh -c "${format_cmd}"
 fi
 
 # Python formatting

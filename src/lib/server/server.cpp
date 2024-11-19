@@ -2,10 +2,10 @@
 
 #include <pthread.h>
 
-#include <iostream>
-#include <thread>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
+#include <thread>
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -16,9 +16,6 @@ namespace hyrise {
 Server::Server(const boost::asio::ip::address& address, const uint16_t port,
                const SendExecutionInfo send_execution_info)
     : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(address, port)), _send_execution_info(send_execution_info) {
-  std::cout << "Server started at " << server_address() << " and port " << server_port() << std::endl
-            << "Run 'psql -h localhost " << server_address() << "' to connect to the server" << std::endl;
-
   const auto allow_dependent_groupby = std::getenv("DEPENDENT_GROUPBY");
   if (!allow_dependent_groupby || !std::strcmp(allow_dependent_groupby, "1")) {
     std::cout << "- Enable Dependent Group-by Reduction" << std::endl;
@@ -38,6 +35,9 @@ Server::Server(const boost::asio::ip::address& address, const uint16_t port,
   if (allow_join_avoidance && !std::strcmp(allow_join_avoidance, "1")) {
     std::cout << "- Enable Join Avoidance" << std::endl;
   }
+
+  std::cout << "Server started at " << server_address() << " and port " << server_port() << std::endl
+            << "Run 'psql -h localhost " << server_address() << "' to connect to the server" << std::endl;
 }
 
 void Server::run() {

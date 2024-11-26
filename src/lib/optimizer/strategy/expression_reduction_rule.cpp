@@ -35,6 +35,7 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
       rewrite_like_prefix_wildcard(expression);
+      unnest_unary_in_expression(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
@@ -358,6 +359,30 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     const auto alias_node = AliasNode::make(root_expressions_replaced, old_column_names);
     lqp_insert_node(root_node, LQPInputSide::Left, alias_node);
   }
+}
+
+void ExpressionReductionRule::unnest_unary_in_expression(std::shared_ptr<AbstractExpression>& input_expression) {
+  // Continue only if the expression is an IN/NOT IN expression.
+  const auto in_expression = std::dynamic_pointer_cast<InExpression>(input_expression);
+  if (!in_expression) {
+    for (auto& argument : input_expression->arguments) {
+      unnest_unary_in_expression(argument);
+    }
+    return;
+  }
+
+  // Rewrite only (NOT) IN expressions with a single-element expression list.
+  if (in_expression->set()->type != ExpressionType::List) {
+    return;
+  }
+  const auto& list_expressions = static_cast<ListExpression&>(*in_expression->set()).elements();
+  if (list_expressions.size() != 1) {
+    return;
+  }
+
+  const auto& operand = in_expression->operand();
+  const auto& value = list_expressions.front();
+  input_expression = in_expression->is_negated() ? not_equals_(operand, value) : equals_(operand, value);
 }
 
 }  // namespace hyrise

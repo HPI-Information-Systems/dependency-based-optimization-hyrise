@@ -2,6 +2,8 @@
 
 #include <pthread.h>
 
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <thread>
 
@@ -14,6 +16,26 @@ namespace hyrise {
 Server::Server(const boost::asio::ip::address& address, const uint16_t port,
                const SendExecutionInfo send_execution_info)
     : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(address, port)), _send_execution_info(send_execution_info) {
+  const auto allow_dependent_groupby = std::getenv("DEPENDENT_GROUPBY");
+  if (!allow_dependent_groupby || !std::strcmp(allow_dependent_groupby, "1")) {
+    std::cout << "- Enable Dependent Group-by Reduction" << std::endl;
+  }
+
+  const auto allow_join_to_semi = std::getenv("JOIN_TO_SEMI");
+  if (!allow_join_to_semi || !std::strcmp(allow_join_to_semi, "1")) {
+    std::cout << "- Enable Join to Semi-join" << std::endl;
+  }
+
+  const auto allow_join_to_predicate = std::getenv("JOIN_TO_PREDICATE");
+  if (!allow_join_to_predicate || !std::strcmp(allow_join_to_predicate, "1")) {
+    std::cout << "- Enable Join to Predicate" << std::endl;
+  }
+
+  const auto allow_join_avoidance = std::getenv("JOIN_AVOIDANCE");
+  if (allow_join_avoidance && !std::strcmp(allow_join_avoidance, "1")) {
+    std::cout << "- Enable Join Avoidance" << std::endl;
+  }
+
   std::cout << "Server started at " << server_address() << " and port " << server_port() << std::endl
             << "Run 'psql -h localhost " << server_address() << "' to connect to the server" << std::endl;
 }

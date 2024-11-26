@@ -55,6 +55,8 @@ void perform_ucc_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPIn
 
   const auto projection_node = ProjectionNode::make(expression_vector(projection_column), subquery_root);
   const auto replacement_predicate_node = PredicateNode::make(equals_(join_column, lqp_subquery_(projection_node)));
+  // std::cout << "O3: rewrite " << join_node->description() << " to [Predicate] " << join_column->as_column_name()
+  //           << " = " << projection_column->as_column_name() << "\n";
 
   lqp_replace_node(join_node, replacement_predicate_node);
 }
@@ -80,6 +82,9 @@ void perform_od_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInp
 
   const auto replacement_predicate_node = PredicateNode::make(
       between_inclusive_(join_column, lqp_subquery_(projection_node_min), lqp_subquery_(projection_node_max)));
+  // std::cout << "O3: rewrite " << join_node->description() << " to [Predicate] " << join_column->as_column_name()
+  //           << " BETWEEN MIN(" << projection_column->as_column_name() << ") AND MAX("
+  //           << projection_column->as_column_name() << ")\n";
 
   lqp_replace_node(join_node, replacement_predicate_node);
 }

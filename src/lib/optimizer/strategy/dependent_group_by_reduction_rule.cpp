@@ -159,6 +159,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     // Try to reduce the group-by list by one dependency at a time, starting with the dependency with the fewest
     // determinants.
     auto group_by_list_changed = false;
+    // const auto prev_node = aggregate_node.deep_copy();
     for (const auto& fd : ordered_fds) {
       // Early exit: The FD's determinants have to be a subset of the group-by columns.
       if (group_by_columns.size() < fd.determinants.size()) {
@@ -172,6 +173,10 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         group_by_columns = fetch_group_by_columns();
       }
     }
+
+    // if (group_by_list_changed) {
+    //   std::cout << "O1: rewrite " << prev_node->description() << " to " << aggregate_node.description() << "\n";
+    // }
 
     // --- Finish: Ensure correct column order ---
     // In case the initial query plan root returned the same columns in the same column order and was not a projection,

@@ -19,6 +19,7 @@ using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_node,
                               const std::shared_ptr<AbstractExpression>& candidate_column_expression,
                               const std::shared_ptr<AbstractExpression>& exchangeable_column_expression,
+                              const std::shared_ptr<AbstractExpression>& join_column_expression,
                               const std::shared_ptr<JoinNode>& join_node, const LQPInputSide removable_input_side) {
   // Test that exchangeable_column_expression is unique. Otherwise, there could be multiple matches and we must perform
   // the original join.
@@ -37,7 +38,8 @@ bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_no
   const auto& left_input = predicate_node->left_input();
   lqp_remove_node(predicate_node);
   const auto rewritable =
-      join_node->input(removable_input_side)->has_matching_ind({exchangeable_column_expression}, *join_node);
+      join_node->input(removable_input_side)
+          ->has_matching_ind({join_column_expression}, {exchangeable_column_expression}, *join_node);
   lqp_insert_node_above(left_input, predicate_node);
   return rewritable;
 }
@@ -53,6 +55,8 @@ void perform_ucc_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPIn
 
   const auto projection_node = ProjectionNode::make(expression_vector(projection_column), subquery_root);
   const auto replacement_predicate_node = PredicateNode::make(equals_(join_column, lqp_subquery_(projection_node)));
+  // std::cout << "O3: rewrite " << join_node->description() << " to [Predicate] " << join_column->as_column_name()
+  //           << " = " << projection_column->as_column_name() << "\n";
 
   lqp_replace_node(join_node, replacement_predicate_node);
 }
@@ -78,6 +82,9 @@ void perform_od_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInp
 
   const auto replacement_predicate_node = PredicateNode::make(
       between_inclusive_(join_column, lqp_subquery_(projection_node_min), lqp_subquery_(projection_node_max)));
+  // std::cout << "O3: rewrite " << join_node->description() << " to [Predicate] " << join_column->as_column_name()
+  //           << " BETWEEN MIN(" << projection_column->as_column_name() << ") AND MAX("
+  //           << projection_column->as_column_name() << ")\n";
 
   lqp_replace_node(join_node, replacement_predicate_node);
 }
@@ -136,8 +143,8 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
     Assert(candidate_expression, "PredicateNode must have a predicate.");
 
     // Only predicates in the form `column = value` or `column BETWEEN value1 AND value2` are useful to our
-    // optimization. With these conditions, we have the potential (given filtered columns has a UCC or there is an OD between
-    // join column and filtered column) to rewrite the join to a scan.
+    // optimization. With these conditions, we have the potential (given filtered columns has a UCC or there is an OD
+    // between join column and filtered column) to rewrite the join to a scan.
     const auto predicate_condition = candidate_expression->predicate_condition;
     const auto is_equals_predicate = predicate_condition == PredicateCondition::Equals;
     if (!is_equals_predicate && !is_between_predicate_condition(predicate_condition)) {
@@ -182,8 +189,8 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
     }
 
     // Check if we can perform an OD-based rewrite.
-    if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression, join_node,
-                                 *prunable_side)) {
+    if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression,
+                                 used_join_column_expression, join_node, *prunable_side)) {
       perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
                          exchangeable_column_expression);
       performed_rewrite = true;

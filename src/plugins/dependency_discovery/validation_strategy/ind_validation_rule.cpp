@@ -60,7 +60,7 @@ ValidationStatus perform_set_based_inclusion_check(
   // UNOPT: Do not use continuuousness for shortcut.
   /*
   if constexpr (std::is_integral_v<T>) {
-    Assert(!including_values.empty(), "Exmpty tables not considered.");
+    Assert(!including_values.empty(), "Empty tables not considered.");
     if (including_min_max) {
       const auto domain = static_cast<size_t>(including_min_max->second - including_min_max->first);
       if (domain == including_table->row_count() - 1) {
@@ -141,7 +141,7 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
   resolve_data_type(included_table->column_data_type(included_column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    // UNOPT: Alwyas perform set-based check.
+    // UNOPT: Always perform set-based check.
     /*const auto& included_min_max =
         ValidationUtils<ColumnDataType>::get_column_min_max_value(included_table, included_column_id);
 

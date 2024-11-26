@@ -10,10 +10,10 @@ then
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkStarSchema'
-scale_factors="1 20 30 40 50 60 70 80 90 100"
+scale_factors="1 10 20 30 40 50 60 70 80 90 100"
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
-warmup_seconds=1
-runs=100
+warmup_seconds=0
+runs=0
 
 output="$(uname -s)"
 case "${output}" in
@@ -88,13 +88,14 @@ do
       caching="--dont_cache_binary_tables"
     fi
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ALL OFF"
-    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} ${caching} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_all_off.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_all_off.log"
-
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) w/ plugin NO SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
-    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 VALIDATION_LOOPS=1000 "${build_folder}"/"$benchmark" -s ${sf} ${caching} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
+    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 VALIDATION_LOOPS=1000 "${build_folder}"/"$benchmark" -s ${sf} ${caching} -r ${runs} -t ${runtime} -w ${warmup_seconds} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
   done
 done
+
+benchmark="hyriseBenchmarkJoinOrder"
+    echo "Running $benchmark for $commit... (single-threaded, w/ plugin NO SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
+    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 VALIDATION_LOOPS=1000 "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_plugin.log"
 
 cd "${build_folder}"
 

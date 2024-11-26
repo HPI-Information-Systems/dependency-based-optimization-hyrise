@@ -67,10 +67,10 @@
 #ifndef DSS_H
 #define  DSS_H
 #ifdef TPCH
-#define NAME			"TPC-H"
+#define NAME            "TPC-H"
 #endif
 #ifdef TPCR
-#define NAME			"TPC-R"
+#define NAME            "TPC-R"
 #endif
 #ifndef NAME
 #error Benchmark version must be defined in config.h
@@ -85,21 +85,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define  NONE		-1
-#define  PART		0
-#define  PSUPP		1
-#define  SUPP		2
-#define  CUST		3
-#define  ORDER		4
-#define  LINE		5
+#define  NONE       -1
+#define  PART       0
+#define  PSUPP      1
+#define  SUPP       2
+#define  CUST       3
+#define  ORDER      4
+#define  LINE       5
 #define  ORDER_LINE 6
 #define  PART_PSUPP 7
-#define  NATION		8
-#define  REGION		9
-#define  UPDATE		10
-#define  MAX_TABLE	11
-#define  ONE_STREAM	1
-#define  ADD_AT_END	2
+#define  NATION     8
+#define  REGION     9
+#define  UPDATE     10
+#define  MAX_TABLE  11
+#define  ONE_STREAM 1
+#define  ADD_AT_END 2
 
 #ifdef MAX
 #undef MAX
@@ -113,8 +113,8 @@
 #define INTERNAL_ERROR(p)  {fprintf(stderr,"%s", p);abort();}
 #define LN_CNT  4
 extern char lnoise[];
-#define LIFENOISE(n, var)	\
-	if (verbose > 0) fprintf(stderr, "%c\b", lnoise[(var%LN_CNT)])
+#define LIFENOISE(n, var)   \
+    if (verbose > 0) fprintf(stderr, "%c\b", lnoise[(var%LN_CNT)])
 
 #define MALLOC_CHECK(var) \
     if ((var) == NULL) \
@@ -149,36 +149,37 @@ extern char lnoise[];
 #define  MK_SPARSE(key, seq) \
          (((((key>>3)<<2)|(seq & 0x0003))<<3)|(key & 0x0007))
 
-#define RANDOM(tgt, lower, upper, stream)	dss_random(&tgt, lower, upper, stream)
-#define RANDOM64(tgt, lower, upper, stream)	dss_random64(&tgt, lower, upper, stream)
+#define RANDOM(tgt, lower, upper, stream)   dss_random(&tgt, lower, upper, stream)
+#define RANDOM64(tgt, lower, upper, stream) dss_random64(&tgt, lower, upper, stream)
 
 /*
- * some handy access functions 
+ * some handy access functions
  */
-#define DIST_SIZE(d)		d->count
-#define DIST_MEMBER(d, i)	((set_member *)((d)->list + i))->text
-#define DIST_PERMUTE(d, i)	(d->permute[i])
+#define DIST_SIZE(d)        d->count
+#define DIST_MEMBER(d, i)   ((set_member *)((d)->list + i))->text
+#define DIST_PERMUTE(d, i)  (d->permute[i])
 
 typedef struct
 {
    char     *name;
    char     *comment;
    DSS_HUGE      base;
-   int       (*loader) ();
-   long      (*gen_seed)();
+   // HYRISE: add function prototypes (C2x compatibility).
+   int       (*loader) (void *, int);
+   long      (*gen_seed)(int, DSS_HUGE);
    int       child;
    DSS_HUGE vtotal;
 }         tdef;
 
 typedef struct SEED_T {
-	long table;
-	DSS_HUGE value;
-	DSS_HUGE usage;
-	DSS_HUGE boundary;
+    long table;
+    DSS_HUGE value;
+    DSS_HUGE usage;
+    DSS_HUGE boundary;
 #ifdef RNG_TEST
-	DSS_HUGE nCalls;
+    DSS_HUGE nCalls;
 #endif
-	} seed_t;
+    } seed_t;
 
 
 #if defined(__STDC__)
@@ -188,38 +189,38 @@ typedef struct SEED_T {
 #endif
 
 /* bm_utils.c */
-char	*env_config PROTO((char *var, char *dflt));
-long	yes_no PROTO((char *prompt));
+char    *env_config PROTO((char *var, char *dflt));
+long    yes_no PROTO((char *prompt));
 void     a_rnd PROTO((int min, int max, int column, char *dest));
 int     tx_rnd PROTO((long min, long max, long column, char *tgt));
-long	julian PROTO((long date));
-long	unjulian PROTO((long date));
-FILE	*tbl_open PROTO((int tbl, char *mode));
-long	dssncasecmp PROTO((char *s1, char *s2, int n));
-long	dsscasecmp PROTO((char *s1, char *s2));
-int		pick_str PROTO((distribution * s, int c, char *target));
-void	agg_str PROTO((distribution *set, long count, long col, char *dest));
-void	read_dist PROTO((char *path, char *name, distribution * target));
-void	embed_str PROTO((distribution *d, int min, int max, int stream, char *dest));
+long    julian PROTO((long date));
+long    unjulian PROTO((long date));
+FILE    *tbl_open PROTO((int tbl, char *mode));
+long    dssncasecmp PROTO((char *s1, char *s2, int n));
+long    dsscasecmp PROTO((char *s1, char *s2));
+int     pick_str PROTO((distribution * s, int c, char *target));
+void    agg_str PROTO((distribution *set, long count, long col, char *dest));
+void    read_dist PROTO((char *path, char *name, distribution * target));
+void    embed_str PROTO((distribution *d, int min, int max, int stream, char *dest));
 #ifndef STDLIB_HAS_GETOPT
-int		getopt PROTO((int arg_cnt, char **arg_vect, char *oprions));
+int     getopt PROTO((int arg_cnt, char **arg_vect, char *oprions));
 #endif /* STDLIB_HAS_GETOPT */
-DSS_HUGE	set_state PROTO((int t, long scale, long procs, long step, DSS_HUGE *e));
+DSS_HUGE    set_state PROTO((int t, long scale, long procs, long step, DSS_HUGE *e));
 
 /* rnd.c */
-DSS_HUGE	NextRand PROTO((DSS_HUGE nSeed));
-DSS_HUGE	UnifInt PROTO((DSS_HUGE nLow, DSS_HUGE nHigh, long nStream));
-void	dss_random(DSS_HUGE *tgt, DSS_HUGE min, DSS_HUGE max, long seed);
-void	row_start(int t);
-void	row_stop(int t);
-void	dump_seeds(int t);
+DSS_HUGE    NextRand PROTO((DSS_HUGE nSeed));
+DSS_HUGE    UnifInt PROTO((DSS_HUGE nLow, DSS_HUGE nHigh, long nStream));
+void    dss_random(DSS_HUGE *tgt, DSS_HUGE min, DSS_HUGE max, long seed);
+void    row_start(int t);
+void    row_stop(int t);
+void    dump_seeds(int t);
 
 /* text.c */
-#define MAX_GRAMMAR_LEN	12	/* max length of grammar component */
-#define MAX_SENT_LEN	256 /* max length of populated sentence */
-#define RNG_PER_SENT	27	/* max number of RNG calls per sentence */
+#define MAX_GRAMMAR_LEN 12  /* max length of grammar component */
+#define MAX_SENT_LEN    256 /* max length of populated sentence */
+#define RNG_PER_SENT    27  /* max number of RNG calls per sentence */
 
-void		dbg_text PROTO((char * t, int min, int max, int s));
+void        dbg_text PROTO((char * t, int min, int max, int s));
 
 #ifdef DECLARER
 #define EXTERN
@@ -238,7 +239,7 @@ EXTERN long updates;
 EXTERN long table;
 EXTERN long children;
 EXTERN int  step;
-EXTERN int	set_seeds;
+EXTERN int  set_seeds;
 EXTERN char *d_path;
 
 /* added for segmented updates */
@@ -247,7 +248,7 @@ EXTERN int delete_segments;
 EXTERN int insert_orders_segment;
 EXTERN int insert_lineitem_segment;
 EXTERN int delete_segment;
- 
+
 
 #ifndef DECLARER
 extern tdef tdefs[];
@@ -292,7 +293,7 @@ extern tdef tdefs[];
 #define  S_NAME_FMT "%%s%%0%d%s"
 #define  S_ABAL_MIN   -99999
 #define  S_ABAL_MAX    999999
-#define  S_CMNT_MAX    101      
+#define  S_CMNT_MAX    101
 #define  S_CMNT_BBB    10       /* number of BBB comments/SF */
 #define  BBB_DEADBEATS 50       /* % that are complaints */
 #define  BBB_BASE  "Customer "
@@ -391,60 +392,60 @@ extern tdef tdefs[];
  * beyond this point we need to allow for BCD calculations
  */
 #define  MAX_32B_SCALE   1000.0
-#define LONG2HUGE(src, dst)		*dst = (DSS_HUGE)src	
-#define HUGE2LONG(src, dst)		*dst = (long)src
-#define HUGE_SET(src, dst)		*dst = *src	
-#define HUGE_MUL(op1, op2)		*op1 *= op2	
-#define HUGE_DIV(op1, op2)		*op1 /= op2	
-#define HUGE_ADD(op1, op2, dst)	*dst = *op1 + op2	
-#define HUGE_SUB(op1, op2, dst)	*dst = *op1 - op2	
-#define HUGE_MOD(op1, op2)		*op1 % op2	
-#define HUGE_CMP(op1, op2)		(*op1 == *op2)?0:(*op1 < *op2)-1:1
+#define LONG2HUGE(src, dst)     *dst = (DSS_HUGE)src
+#define HUGE2LONG(src, dst)     *dst = (long)src
+#define HUGE_SET(src, dst)      *dst = *src
+#define HUGE_MUL(op1, op2)      *op1 *= op2
+#define HUGE_DIV(op1, op2)      *op1 /= op2
+#define HUGE_ADD(op1, op2, dst) *dst = *op1 + op2
+#define HUGE_SUB(op1, op2, dst) *dst = *op1 - op2
+#define HUGE_MOD(op1, op2)      *op1 % op2
+#define HUGE_CMP(op1, op2)      (*op1 == *op2)?0:(*op1 < *op2)-1:1
 
 
 /******** environmental variables and defaults ***************/
-#define  DIST_TAG  "DSS_DIST"		/* environment var to override ... */
-#define  DIST_DFLT "dists.dss"		/* default file to hold distributions */
-#define  PATH_TAG  "DSS_PATH"		/* environment var to override ... */
-#define  PATH_DFLT "."				/* default directory to hold tables */
-#define  CONFIG_TAG  "DSS_CONFIG"	/* environment var to override ... */
-#define  CONFIG_DFLT "."			/* default directory to config files */
-#define  ADHOC_TAG  "DSS_ADHOC"		/* environment var to override ... */
-#define  ADHOC_DFLT "adhoc.dss"		/* default file name for adhoc vars */
+#define  DIST_TAG  "DSS_DIST"       /* environment var to override ... */
+#define  DIST_DFLT "dists.dss"      /* default file to hold distributions */
+#define  PATH_TAG  "DSS_PATH"       /* environment var to override ... */
+#define  PATH_DFLT "."              /* default directory to hold tables */
+#define  CONFIG_TAG  "DSS_CONFIG"   /* environment var to override ... */
+#define  CONFIG_DFLT "."            /* default directory to config files */
+#define  ADHOC_TAG  "DSS_ADHOC"     /* environment var to override ... */
+#define  ADHOC_DFLT "adhoc.dss"     /* default file name for adhoc vars */
 
 /******* output macros ********/
 #ifndef SEPARATOR
 #define SEPARATOR '|' /* field spearator for generated flat files */
 #endif
 /* Data type flags for a single print routine */
-#define DT_STR		0
+#define DT_STR      0
 #ifndef MVS
-#define DT_VSTR		DT_STR
+#define DT_VSTR     DT_STR
 #else
-#define DT_VSTR		1
+#define DT_VSTR     1
 #endif /* MVS */
-#define DT_INT		2
-#define DT_HUGE		3
-#define DT_KEY		4
-#define DT_MONEY	5
-#define DT_CHR		6
+#define DT_INT      2
+#define DT_HUGE     3
+#define DT_KEY      4
+#define DT_MONEY    5
+#define DT_CHR      6
 
 int dbg_print(int dt, FILE *tgt, void *data, int len, int eol);
-#define PR_STR(f, str, len)		dbg_print(DT_STR, f, (void *)str, len, 1)
-#define PR_VSTR(f, str, len) 	dbg_print(DT_VSTR, f, (void *)str, len, 1)
-#define PR_VSTR_LAST(f, str, len) 	dbg_print(DT_VSTR, f, (void *)str, len, 0)
-#define PR_INT(f, str) 			dbg_print(DT_INT, f, (void *)str, 0, 1)
-#define PR_HUGE(f, str) 		dbg_print(DT_HUGE, f, (void *)str, 0, 1)
-#define PR_KEY(f, str) 			dbg_print(DT_KEY, f, (void *)str, 0, -1)
-#define PR_MONEY(f, str) 		dbg_print(DT_MONEY, f, (void *)str, 0, 1)
-#define PR_CHR(f, str)	 		dbg_print(DT_CHR, f, (void *)str, 0, 1)
+#define PR_STR(f, str, len)     dbg_print(DT_STR, f, (void *)str, len, 1)
+#define PR_VSTR(f, str, len)    dbg_print(DT_VSTR, f, (void *)str, len, 1)
+#define PR_VSTR_LAST(f, str, len)   dbg_print(DT_VSTR, f, (void *)str, len, 0)
+#define PR_INT(f, str)          dbg_print(DT_INT, f, (void *)str, 0, 1)
+#define PR_HUGE(f, str)         dbg_print(DT_HUGE, f, (void *)str, 0, 1)
+#define PR_KEY(f, str)          dbg_print(DT_KEY, f, (void *)str, 0, -1)
+#define PR_MONEY(f, str)        dbg_print(DT_MONEY, f, (void *)str, 0, 1)
+#define PR_CHR(f, str)          dbg_print(DT_CHR, f, (void *)str, 0, 1)
 #define  PR_STRT(fp)   /* any line prep for a record goes here */
 #define  PR_END(fp)    fprintf(fp, "\n")   /* finish the record here */
 #ifdef MDY_DATE
-#define  PR_DATE(tgt, yr, mn, dy)	\
+#define  PR_DATE(tgt, yr, mn, dy)   \
    sprintf(tgt, "%02d-%02d-19%02d", mn, dy, yr)
 #else
-#define  PR_DATE(tgt, yr, mn, dy)	\
+#define  PR_DATE(tgt, yr, mn, dy)   \
 sprintf(tgt, "19%02ld-%02ld-%02ld", yr, mn, dy)
 #endif /* DATE_FORMAT */
 
@@ -453,10 +454,10 @@ sprintf(tgt, "19%02ld-%02ld-%02ld", yr, mn, dy)
  */
 #define  VRF_STR(t, d) {char *xx = d; while (*xx) tdefs[t].vtotal += *xx++;}
 #define  VRF_INT(t,d)  tdefs[t].vtotal += d
-#define  VRF_HUGE(t,d)	tdefs[t].vtotal = *((long *)&d) + *((long *)(&d + 1))
+#define  VRF_HUGE(t,d)  tdefs[t].vtotal = *((long *)&d) + *((long *)(&d + 1))
 /* assume float is a 64 bit quantity */
-#define  VRF_MONEY(t,d)	tdefs[t].vtotal = *((long *)&d) + *((long *)(&d + 1))
-#define  VRF_CHR(t,d)	tdefs[t].vtotal += d
+#define  VRF_MONEY(t,d) tdefs[t].vtotal = *((long *)&d) + *((long *)(&d + 1))
+#define  VRF_CHR(t,d)   tdefs[t].vtotal += d
 #define  VRF_STRT(t)  
 #define  VRF_END(t)  
 

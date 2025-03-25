@@ -65,3 +65,6 @@
 [submodule "third_party/concurrentqueue"]
 	path = third_party/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
+[submodule "third_party/unordered_dense"]
+	path = third_party/unordered_dense
+	url = https://github.com/martinus/unordered_dense/

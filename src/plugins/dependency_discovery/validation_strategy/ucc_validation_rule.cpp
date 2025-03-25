@@ -59,7 +59,7 @@ bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<
                                                           const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
-  auto distinct_values = std::unordered_set<ColumnDataType>(table->row_count());
+  auto distinct_values = ValidationSet<ColumnDataType>(table->row_count());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto source_chunk = table->get_chunk(chunk_id);

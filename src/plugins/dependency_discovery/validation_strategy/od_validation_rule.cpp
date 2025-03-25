@@ -90,10 +90,10 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
 
   // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample is likely slower).
   // if (row_count < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE) {
-    if (!fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
-        !fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
-      return false;
-    }
+  if (!fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
+      !fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
+    return false;
+  }
   /*} else {
     auto random_rows = std::unordered_set<size_t>{sample_size};
     auto generator = std::mt19937{1337};

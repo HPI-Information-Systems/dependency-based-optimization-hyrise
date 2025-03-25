@@ -14,9 +14,9 @@
 #include "dependency_discovery/validation_strategy/ucc_validation_rule.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
 
 namespace {
 

@@ -2,6 +2,7 @@
 
 #include <unordered_set>
 
+#include <boost/unordered/unordered_flat_set.hpp>
 #include "unordered_dense/include/ankerl/unordered_dense.h"
 
 #include "types.hpp"
@@ -18,7 +19,7 @@ enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown, Superfluo
 
 template <class T>
 // using ValidationSet = std::unordered_set<T>;
-using ValidationSet = ankerl::unordered_dense::set<T, ankerl::unordered_dense::hash<T>>;
+using ValidationSet = boost::unordered_flat_set<T>;
 
 class AbstractDependencyCandidate : public Noncopyable {
  public:

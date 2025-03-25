@@ -16,6 +16,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 
 namespace {
 
@@ -101,9 +102,12 @@ DependencyDiscoveryPlugin::provided_user_executable_functions() {
 
 std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() {
   return [&](auto& benchmark_item_runner) {
+    const auto old_scheduler = Hyrise::get().scheduler();
+    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
     for (const auto item_id : benchmark_item_runner.items()) {
       benchmark_item_runner.execute_item(item_id);
     }
+    Hyrise::get().set_scheduler(old_scheduler);
 
     _discover_dependencies();
 

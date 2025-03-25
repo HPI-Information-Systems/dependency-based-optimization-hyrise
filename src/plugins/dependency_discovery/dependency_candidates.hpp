@@ -17,6 +17,7 @@ enum class DependencyType { Order, Inclusion, UniqueColumn, Functional };
 enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown, Superfluous };
 
 template <class T>
+// using ValidationSet = std::unordered_set<T>;
 using ValidationSet = ankerl::unordered_dense::set<T, ankerl::unordered_dense::hash<T>>;
 
 class AbstractDependencyCandidate : public Noncopyable {

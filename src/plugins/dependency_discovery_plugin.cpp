@@ -143,7 +143,7 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
 
     auto loop_timer = Timer{};
     // Get a snapshot of the current LQP cache to work on all currently cached queries.
-    const auto& snapshot = Hyrise::get().default_lqp_cache->snapshot();
+    const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
 
     for (const auto& [_, entry] : snapshot) {
       const auto& root_node = entry.value;

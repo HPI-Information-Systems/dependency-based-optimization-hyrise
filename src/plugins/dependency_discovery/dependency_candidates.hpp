@@ -2,6 +2,8 @@
 
 #include <unordered_set>
 
+#include "unordered_dense/include/ankerl/unordered_dense.h"
+
 #include "types.hpp"
 
 namespace hyrise {
@@ -13,6 +15,9 @@ namespace hyrise {
 enum class DependencyType { Order, Inclusion, UniqueColumn, Functional };
 
 enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown, Superfluous };
+
+template <class T>
+using ValidationSet = ankerl::unordered_dense::set<T, ankerl::unordered_dense::hash<T>>;
 
 class AbstractDependencyCandidate : public Noncopyable {
  public:

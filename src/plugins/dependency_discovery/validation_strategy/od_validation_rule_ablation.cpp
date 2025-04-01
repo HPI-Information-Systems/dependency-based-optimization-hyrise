@@ -18,7 +18,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
-std::vector<size_t> sort_permutation(const std::vector<T>& values) {
+std::vector<size_t> a_sort_permutation(const std::vector<T>& values) {
   auto permutation = std::vector<size_t>(values.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.
   std::iota(permutation.begin(), permutation.end(), 0);
@@ -28,7 +28,7 @@ std::vector<size_t> sort_permutation(const std::vector<T>& values) {
 }
 
 template <typename T>
-std::vector<T> apply_permutation(std::vector<T>& values, const std::vector<size_t>& permutation) {
+std::vector<T> a_apply_permutation(std::vector<T>& values, const std::vector<size_t>& permutation) {
   auto sorted_values = std::vector<T>(values.size());
 
   std::transform(permutation.begin(), permutation.end(), sorted_values.begin(),
@@ -37,8 +37,8 @@ std::vector<T> apply_permutation(std::vector<T>& values, const std::vector<size_
 }
 
 template <typename T>
-bool fill_sample_consecutive(const std::shared_ptr<const Table>& table, const ColumnID column_id,
-                             const uint64_t sample_size, std::vector<T>& values) {
+bool a_fill_sample_consecutive(const std::shared_ptr<const Table>& table, const ColumnID column_id,
+                               const uint64_t sample_size, std::vector<T>& values) {
   const auto chunk_count = table->chunk_count();
   auto row_count = uint64_t{1};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -79,8 +79,8 @@ bool fill_sample_consecutive(const std::shared_ptr<const Table>& table, const Co
 }
 
 template <typename OrderingType, typename OrderedType>
-bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID ordering_column_id,
-                    const ColumnID ordered_column_id, const uint64_t row_count) {
+bool a_sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID ordering_column_id,
+                      const ColumnID ordered_column_id, const uint64_t row_count) {
   const auto sample_size = std::min(row_count, OdValidationRuleAblation::SAMPLE_SIZE);
 
   auto ordering_sample_values = std::vector<OrderingType>{};
@@ -90,11 +90,11 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
 
   // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample is likely slower).
   // if (row_count < OdValidationRuleAblation::MIN_SIZE_FOR_RANDOM_SAMPLE) {
-  if (!fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
-      !fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
+  if (!a_fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
+      !a_fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
     return false;
-    // }
-  } else {
+  }
+  /*  } else {
     auto random_rows = std::unordered_set<size_t>{sample_size};
     auto generator = std::mt19937{1337};
     auto distribution = std::uniform_int_distribution<size_t>{0, row_count - 1};
@@ -113,10 +113,10 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
       ordering_sample_values.emplace_back(*random_ordering_value);
       ordered_sample_values.emplace_back(*random_ordered_value);
     }
-  }
+  }*/
 
-  const auto& permutation = sort_permutation<OrderingType>(ordering_sample_values);
-  const auto& ordered_values = apply_permutation<OrderedType>(ordered_sample_values, permutation);
+  const auto& permutation = a_sort_permutation<OrderingType>(ordering_sample_values);
+  const auto& ordered_values = a_apply_permutation<OrderedType>(ordered_sample_values, permutation);
   bool is_initialized = false;
   auto last_value = OrderedType{};
   for (const auto& current_value : ordered_values) {
@@ -130,8 +130,8 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
 }
 
 template <typename T>
-bool check_column_sortedness(const std::shared_ptr<const Table> table, const ColumnID column_id,
-                             const ChunkID chunk_count) {
+bool a_check_column_sortedness(const std::shared_ptr<const Table> table, const ColumnID column_id,
+                               const ChunkID chunk_count) {
   auto ordered = true;
   auto is_initialized = false;
   auto last_value = T{};
@@ -168,7 +168,7 @@ bool check_column_sortedness(const std::shared_ptr<const Table> table, const Col
 }
 
 template <typename LhsType, typename RhsType>
-ValidationStatus check_two_column_sortedness(const AbstractSegment& lhs_segment, const AbstractSegment& rhs_segment) {
+ValidationStatus a_check_two_column_sortedness(const AbstractSegment& lhs_segment, const AbstractSegment& rhs_segment) {
   auto status = ValidationStatus::Valid;
   auto is_initialized = false;
   auto lhs_last_value = LhsType{};
@@ -211,9 +211,9 @@ ValidationStatus check_two_column_sortedness(const AbstractSegment& lhs_segment,
 }
 
 template <typename T>
-bool add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id,
-                  std::map<T, SegmentDomainInfo>& index,
-                  typename std::map<T, SegmentDomainInfo>::iterator& previous_it) {
+bool a_add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id,
+                    std::map<T, SegmentDomainInfo>& index,
+                    typename std::map<T, SegmentDomainInfo>::iterator& previous_it) {
   const auto segment_statistics = ValidationUtils<T>::gather_segment_statistics(chunk, column_id);
   const auto& min = *segment_statistics.min;
   const auto& max = *segment_statistics.max;
@@ -281,7 +281,7 @@ ValidationResult OdValidationRuleAblation::_on_validate(const AbstractDependency
 
       // Check ordering for sample.
       const auto ordered = _skip_sampling ? true
-                                          : sample_ordered<OrderingColumnDataType, OrderedColumnDataType>(
+                                          : a_sample_ordered<OrderingColumnDataType, OrderedColumnDataType>(
                                                 table, ordering_column_id, ordered_column_id, row_count);
       if (!ordered) {
         status = ValidationStatus::Invalid;
@@ -305,7 +305,7 @@ ValidationResult OdValidationRuleAblation::_on_validate(const AbstractDependency
           const auto& ordered_segment = chunk->get_segment(ordered_column_id);
 
           // We do not need to sort if the LHS segment is already sorted.
-          const auto chunk_status = check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
+          const auto chunk_status = a_check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
               *ordering_segment, *ordered_segment);
           if (chunk_status == ValidationStatus::Invalid) {
             status = ValidationStatus::Invalid;
@@ -332,8 +332,8 @@ ValidationResult OdValidationRuleAblation::_on_validate(const AbstractDependency
               continue;
             }
 
-            if (!(add_to_index(chunk_id, chunk, ordering_column_id, sort_column_min_max_ordered, sort_column_it) &&
-                  add_to_index(chunk_id, chunk, ordered_column_id, check_column_min_max_ordered, check_column_it))) {
+            if (!(a_add_to_index(chunk_id, chunk, ordering_column_id, sort_column_min_max_ordered, sort_column_it) &&
+                  a_add_to_index(chunk_id, chunk, ordered_column_id, check_column_min_max_ordered, check_column_it))) {
               both_columns_disjoint = false;
               break;
             }
@@ -401,7 +401,7 @@ ValidationResult OdValidationRuleAblation::_on_validate(const AbstractDependency
                 const auto& ordered_segment = chunk->get_segment(ordered_column_id);
 
                 // We do not need to sort if the LHS segment is already sorted.
-                const auto chunk_status = check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
+                const auto chunk_status = a_check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
                     *ordering_segment, *ordered_segment);
                 if (chunk_status == ValidationStatus::Invalid) {
                   status = ValidationStatus::Invalid;
@@ -422,7 +422,7 @@ ValidationResult OdValidationRuleAblation::_on_validate(const AbstractDependency
                 sort->execute();
                 const auto& result_table = sort->get_output();
 
-                if (!check_column_sortedness<OrderedColumnDataType>(result_table, ColumnID{1}, ChunkID{1})) {
+                if (!a_check_column_sortedness<OrderedColumnDataType>(result_table, ColumnID{1}, ChunkID{1})) {
                   status = ValidationStatus::Invalid;
                   return;
                 }
@@ -458,7 +458,8 @@ ValidationResult OdValidationRuleAblation::_on_validate(const AbstractDependency
       sort->execute();
       const auto& result_table = sort->get_output();
 
-      if (!check_column_sortedness<OrderedColumnDataType>(result_table, check_column_id, result_table->chunk_count())) {
+      if (!a_check_column_sortedness<OrderedColumnDataType>(result_table, check_column_id,
+                                                            result_table->chunk_count())) {
         status = ValidationStatus::Invalid;
       }
     });

@@ -184,8 +184,6 @@ void DependencyDiscoveryPlugin::_perform_ablation() {
   }
   Assert(join_to_pred_rule, "Expected JoinToPredicateCandidateRule");
 
-  const auto candidates = _identify_dependency_candidates();
-
   for (const auto& [level, level_name] : magic_enum::enum_entries<AblationLevel>()) {
     Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin",
                                           "Perform validation with ablation level " + std::string{level_name},
@@ -195,7 +193,7 @@ void DependencyDiscoveryPlugin::_perform_ablation() {
     for (const auto& [_, rule] : _validation_rules) {
       rule->apply_ablation_level(level);
     }
-    _validate_dependency_candidates(candidates);
+    _validate_dependency_candidates(_identify_dependency_candidates());
   }
 }
 

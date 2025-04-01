@@ -13,7 +13,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
 ValidationSet<T> collect_values(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
-  auto distinct_values = ValidationSet<T>(table->row_count());
+  auto distinct_values = ValidationSet<T>(2 * table->row_count());
   const auto chunk_count = table->chunk_count();
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {

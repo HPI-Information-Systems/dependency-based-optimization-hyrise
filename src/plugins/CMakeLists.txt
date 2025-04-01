@@ -18,6 +18,7 @@ function(add_plugin)
         ${PARSED_ARGS_NAME}
 
         tbb
+        absl::flat_hash_set
         ${BOOST_LIBS}
     )
 
@@ -35,6 +36,7 @@ endfunction(add_plugin)
 
 set(
     DISCOVERY_PLUGIN_SOURCES
+
     dependency_discovery_plugin.cpp
     dependency_discovery_plugin.hpp
     dependency_discovery/dependency_candidates.cpp
@@ -58,6 +60,14 @@ set(
     dependency_discovery/validation_strategy/od_validation_rule.hpp
     dependency_discovery/validation_strategy/ucc_validation_rule.cpp
     dependency_discovery/validation_strategy/ucc_validation_rule.hpp
+    dependency_discovery/validation_strategy/fd_validation_rule_ablation.cpp
+    dependency_discovery/validation_strategy/fd_validation_rule_ablation.hpp
+    dependency_discovery/validation_strategy/ind_validation_rule_ablation.cpp
+    dependency_discovery/validation_strategy/ind_validation_rule_ablation.hpp
+    dependency_discovery/validation_strategy/od_validation_rule_ablation.cpp
+    dependency_discovery/validation_strategy/od_validation_rule_ablation.hpp
+    dependency_discovery/validation_strategy/ucc_validation_rule_ablation.cpp
+    dependency_discovery/validation_strategy/ucc_validation_rule_ablation.hpp
     dependency_discovery/validation_strategy/validation_utils.cpp
     dependency_discovery/validation_strategy/validation_utils.hpp
 )

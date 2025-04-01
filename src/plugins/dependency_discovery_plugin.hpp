@@ -31,6 +31,8 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
 
   void _discover_dependencies() const;
 
+  void _perform_ablation();
+
   /**
    * Takes a snapshot of the current LQP Cache. Iterates through the LQPs and tries to extract sensible columns as can-
    * didates for UCC validation from each of them. A column is added as candidates if being a UCC has the potential to
@@ -51,11 +53,15 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
 
   void _add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule);
 
+  static void _clear_constraints();
+
   std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _candidate_rules{};
 
   std::unordered_map<DependencyType, std::unique_ptr<AbstractDependencyValidationRule>> _validation_rules{};
 
   uint32_t _validation_repetitions{1};
+
+  bool _ablation{false};
 };
 
 }  // namespace hyrise

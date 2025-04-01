@@ -68,3 +68,9 @@
 [submodule "third_party/unordered_dense"]
 	path = third_party/unordered_dense
 	url = https://github.com/martinus/unordered_dense/
+[submodule "abseil"]
+	path = abseil
+	url = https://github.com/abseil/abseil-cpp
+[submodule "third_party/abseil"]
+	path = third_party/abseil
+	url = https://github.com/abseil/abseil-cpp

@@ -48,11 +48,12 @@ void add_constraint(const std::shared_ptr<Table>& table, const std::shared_ptr<A
 namespace hyrise {
 
 DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
-  auto naive_validation = false;
-  const auto perform_unopt = std::getenv("NAIVE_VALIDATION");
-  if (perform_unopt && !std::strcmp(perform_unopt, "1")) {
-    std::cout << "- Perform naive validation" << std::endl;
-    naive_validation = true;
+  auto ablation_level = std::optional<AblationLevel>{};
+  const auto perform_level = std::getenv("ABLATION_LEVEL");
+  if (perform_level) {
+    ablation_level = magic_enum::enum_cast<AblationLevel>(std::string{perform_level});
+    Assert(ablation_level, "Invalid ablation level: " + std::string{perform_level});
+    std::cout << "- Perform validation with ablation level " << *ablation_level << "\n";
   }
 
   const auto perform_ablation = std::getenv("PERFORM_ABLATION");
@@ -77,7 +78,7 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
   if (!allow_join_to_predicate || !std::strcmp(allow_join_to_predicate, "1")) {
     std::cout << "- Enable Join to Predicate" << std::endl;
     auto rule = std::make_unique<JoinToPredicateCandidateRule>();
-    if (naive_validation) {
+    if (ablation_level && *ablation_level == AblationLevel::None) {
       rule->_skip_dependence = true;
     }
     _add_candidate_rule(std::move(rule));
@@ -89,7 +90,7 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
     _add_candidate_rule(std::make_unique<JoinAvoidanceCandidateRule>());
   }
 
-  if (perform_ablation || naive_validation) {
+  if (perform_ablation || ablation_level) {
     _add_validation_rule(std::make_unique<UccValidationRuleAblation>());
     _add_validation_rule(std::make_unique<OdValidationRuleAblation>());
     _add_validation_rule(std::make_unique<IndValidationRuleAblation>());
@@ -101,9 +102,9 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
     _add_validation_rule(std::make_unique<FdValidationRule>());
   }
 
-  if (naive_validation) {
+  if (ablation_level) {
     for (const auto& [_, rule] : _validation_rules) {
-      rule->apply_ablation_level(AblationLevel::None);
+      rule->apply_ablation_level(*ablation_level);
     }
   }
 

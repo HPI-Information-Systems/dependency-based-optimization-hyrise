@@ -210,9 +210,9 @@ ValidationResult IndValidationRuleAblation::_on_validate(const AbstractDependenc
           }
 
           including_unique_by_statistics =
-              including_statistics.all_segments_unique && including_statistics.segments_disjoint;
-          including_continuous = including_statistics.segments_continuous;
-          if (including_unique_by_statistics && !_skip_uniqueness) {
+              !_skip_uniqueness && including_statistics.all_segments_unique && including_statistics.segments_disjoint;
+          including_continuous = _skip_continuousness ? false : including_statistics.segments_continuous;
+          if (including_unique_by_statistics) {
             result.constraints[including_table] = std::make_shared<TableKeyConstraint>(
                 std::set<ColumnID>{including_column_id}, KeyConstraintType::UNIQUE);
           }
@@ -223,7 +223,7 @@ ValidationResult IndValidationRuleAblation::_on_validate(const AbstractDependenc
         result.status = ValidationStatus::Valid;
         return;
       }
-    } else {
+    } else if (!_skip_min_max) {
       including_min_max =
           ValidationUtils<ColumnDataType>::get_column_min_max_value(including_table, including_column_id);
       if (including_min_max && (including_min_max->first > included_min_max->first ||

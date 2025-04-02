@@ -212,7 +212,7 @@ ValidationResult IndValidationRuleAblation::_on_validate(const AbstractDependenc
           including_unique_by_statistics =
               including_statistics.all_segments_unique && including_statistics.segments_disjoint;
           including_continuous = including_statistics.segments_continuous;
-          if (including_unique_by_statistics) {
+          if (including_unique_by_statistics && !_skip_uniqueness) {
             result.constraints[including_table] = std::make_shared<TableKeyConstraint>(
                 std::set<ColumnID>{including_column_id}, KeyConstraintType::UNIQUE);
           }

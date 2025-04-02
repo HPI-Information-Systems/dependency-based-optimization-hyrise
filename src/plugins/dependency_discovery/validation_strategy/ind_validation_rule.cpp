@@ -13,7 +13,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
 ValidationSet<T> collect_values(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
-  auto distinct_values = ValidationSet<T>(2 * table->row_count());
+  auto distinct_values = ValidationSet<T>(table->row_count());
   const auto chunk_count = table->chunk_count();
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -87,8 +87,7 @@ ValidationStatus perform_set_based_inclusion_check(
     if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
       for (const auto& value : *dictionary_segment->dictionary()) {
         if (!including_values.contains(value)) {
-          status = ValidationStatus::Invalid;
-          break;
+          return ValidationStatus::Invalid;
         }
       }
     } else {

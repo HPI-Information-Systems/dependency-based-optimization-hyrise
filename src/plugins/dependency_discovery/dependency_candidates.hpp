@@ -20,8 +20,8 @@ enum class DependencyType { Order, Inclusion, UniqueColumn, Functional };
 enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown, Superfluous };
 
 template <class T>
-// using ValidationSet = std::unordered_set<T>;
-using ValidationSet = boost::unordered_flat_set<T>;
+using ValidationSet = std::unordered_set<T>;
+// using ValidationSet = boost::unordered_flat_set<T>;
 // using ValidationSet = boost::unordered_node_set<T>;
 // using ValidationSet = absl::flat_hash_set<T>;
 // using ValidationSet = ankerl::unordered_dense::set<T>;

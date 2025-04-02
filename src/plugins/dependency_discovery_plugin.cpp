@@ -163,7 +163,7 @@ void DependencyDiscoveryPlugin::_discover_dependencies() const {
 
   auto message = std::stringstream{};
   const auto discomery_time = discovery_timer.lap();
-  message << "Executed dependency discovery in " << format_duration(discomery_time) << " (" << discomery_time << " ns)";
+  message << "Executed dependency discovery in " << format_duration(discomery_time) << " (" << discomery_time << ")";
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
@@ -241,7 +241,7 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
   const auto generation_time = loop_times / _validation_repetitions;
   auto message = std::stringstream{};
   message << "Generated " << dependency_candidates.size() << " candidates in " << format_duration(generation_time)
-          << " (" << generation_time << " ns)";
+          << " (" << generation_time << ")";
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   return dependency_candidates;
 }
@@ -326,20 +326,18 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
 
     switch (candidate->status) {
       case ValidationStatus::Invalid:
-        message << " [rejected in " << format_duration(mean_candidate_time) << " (" << mean_candidate_time << " ns)"
-                << "]";
+        message << " [rejected in " << format_duration(mean_candidate_time) << " (" << mean_candidate_time << ")]";
         break;
       case ValidationStatus::AlreadyKnown:
         message << " [skipped (already known) in " << format_duration(mean_candidate_time) << " ("
-                << mean_candidate_time << " ns)" << "]";
+                << mean_candidate_time << ")]";
         break;
       case ValidationStatus::Valid:
-        message << " [confirmed in " << format_duration(mean_candidate_time) << " (" << mean_candidate_time << " ns)"
-                << "]";
+        message << " [confirmed in " << format_duration(mean_candidate_time) << " (" << mean_candidate_time << ")]";
         break;
       case ValidationStatus::Superfluous:
         message << " [skipped (not required anymore) in " << format_duration(mean_candidate_time) << " ("
-                << mean_candidate_time << " ns)" << "]";
+                << mean_candidate_time << ")]";
         break;
       case ValidationStatus::Uncertain:
         Fail("Expected explicit validation result for " + candidate->description());
@@ -353,7 +351,7 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
   const auto validation_time = loop_times / _validation_repetitions;
   message << "Validated " << dependency_candidates.size() << " candidates (" << valid_count << " valid, "
           << invalid_count << " invalid, " << skipped_count << " superfluous) in " << format_duration(validation_time)
-          << " (" << validation_time << " ns)";
+          << " (" << validation_time << ")";
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
 }
 

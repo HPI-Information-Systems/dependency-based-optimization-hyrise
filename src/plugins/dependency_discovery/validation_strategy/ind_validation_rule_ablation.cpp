@@ -14,7 +14,7 @@ namespace hyrise {
 template <typename T>
 ValidationSet<T> IndValidationRuleAblation::_collect_values(const std::shared_ptr<const Table>& table,
                                                             const ColumnID column_id) const {
-  auto distinct_values = ValidationSet<T>(2 * table->row_count());
+  auto distinct_values = ValidationSet<T>(table->row_count());
   const auto chunk_count = table->chunk_count();
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -24,29 +24,26 @@ ValidationSet<T> IndValidationRuleAblation::_collect_values(const std::shared_pt
     }
 
     const auto& segment = chunk->get_segment(column_id);
-    auto inserted = false;
     if (!_skip_bulk_insert) {
       if (const auto& value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment)) {
         // Directly insert all values.
         const auto& values = value_segment->values();
         distinct_values.insert(values.cbegin(), values.cend());
-        inserted = true;
+        continue;
       } else if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
         // Directly insert dictionary entries.
         const auto& dictionary = dictionary_segment->dictionary();
         distinct_values.insert(dictionary->cbegin(), dictionary->cend());
-        inserted = true;
+        continue;
       }
     }
 
-    if (!inserted) {
-      // Fallback: Iterate the whole segment and decode its values.
-      segment_iterate<T>(*segment, [&](const auto& position) {
-        if (!position.is_null()) {
-          distinct_values.insert(position.value());
-        }
-      });
-    }
+    // Fallback: Iterate the whole segment and decode its values.
+    segment_iterate<T>(*segment, [&](const auto& position) {
+      if (!position.is_null()) {
+        distinct_values.insert(position.value());
+      }
+    });
   }
 
   return distinct_values;
@@ -103,12 +100,11 @@ ValidationStatus IndValidationRuleAblation::_perform_set_based_inclusion_check(
       if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
         for (const auto& value : *dictionary_segment->dictionary()) {
           if (!including_values.contains(value)) {
-            status = ValidationStatus::Invalid;
-            break;
+            return ValidationStatus::Invalid;
           }
         }
+        inserted = true;
       }
-      inserted = true;
     }
     if (!inserted) {
       segment_with_iterators<T>(*segment, [&](auto it, const auto end) {

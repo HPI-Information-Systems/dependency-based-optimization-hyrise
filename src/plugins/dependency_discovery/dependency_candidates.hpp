@@ -35,8 +35,8 @@ enum class AblationLevel {
   IndContinuousness,
   OdSampling,
   OdIndex,
-  UccBulkInsert,
   UccDictionary,
+  UccBulkInsert,
   UccIndex
 };
 

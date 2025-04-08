@@ -113,11 +113,6 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
     const auto requested_repetitions = std::atol(loop_count);
     Assert(requested_repetitions > 0, "Validation must be executed at least once!");
     _validation_repetitions = static_cast<uint32_t>(requested_repetitions);
-    if (_validation_repetitions > 1) {
-      const auto allow_constraints = std::getenv("SCHEMA_CONSTRAINTS");
-      Assert(allow_constraints && !std::strcmp(allow_constraints, "0"),
-             "Looping validation only permitted if no schema constraints are added as it resets all constrints.");
-    }
   }
   std::cout << "- Execute " << _validation_repetitions << " validation run(s)" << std::endl;
 }
@@ -269,6 +264,9 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
       }
 
       _clear_constraints();
+      if (Hyrise::get().add_constraints) {
+        Hyrise::get().add_constraints();
+      }
     }
 
     auto loop_timer = Timer{};

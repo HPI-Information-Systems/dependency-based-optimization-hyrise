@@ -206,6 +206,13 @@ void AbstractTableGenerator::generate_and_store() {
   if (!allow_constraints || !std::strcmp(allow_constraints, "1")) {
     std::cout << "- Adding schema-defined constraints" << std::endl;
     _add_constraints(table_info_by_name);
+    Hyrise::get().add_constraints = [this]() {
+      auto table_infos = std::unordered_map<std::string, BenchmarkTableInfo>{};
+      for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+        table_infos.emplace(table_name, BenchmarkTableInfo{table});
+      }
+      _add_constraints(table_infos);
+    };
   }
 
   /**

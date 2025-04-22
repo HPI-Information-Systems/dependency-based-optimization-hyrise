@@ -136,7 +136,8 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   return rewritten_expression;
 }
 
-void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op, std::unordered_set<std::shared_ptr<AbstractOperator>>& visited_operators) {
+void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op,
+                                             std::unordered_set<std::shared_ptr<AbstractOperator>>& visited_operators) {
   if (!op || visited_operators.contains(op)) {
     return;
   }
@@ -144,7 +145,8 @@ void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOpera
   execute_correlated_subquery_recursively(op->mutable_left_input(), visited_operators);
   execute_correlated_subquery_recursively(op->mutable_right_input(), visited_operators);
 
-  DebugAssert(op->state() == OperatorState::Created, "ExpressionEvaluator should exclusively manage operators of correlated subqueries.");
+  DebugAssert(op->state() == OperatorState::Created,
+              "ExpressionEvaluator should exclusively manage operators of correlated subqueries.");
   op->execute();
 }
 

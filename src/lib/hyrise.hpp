@@ -57,6 +57,8 @@ class Hyrise : public Singleton<Hyrise> {
   // result JSON.
   std::weak_ptr<BenchmarkRunner> benchmark_runner;
 
+  std::function<void(void)> add_constraints;
+
  private:
   Hyrise();
   friend class Singleton;

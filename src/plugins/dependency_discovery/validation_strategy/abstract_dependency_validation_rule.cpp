@@ -149,4 +149,8 @@ std::shared_ptr<AbstractTableConstraint> AbstractDependencyValidationRule::_cons
   Fail("Invalid dependency candidate");
 }
 
+void AbstractDependencyValidationRule::apply_ablation_level(const AblationLevel /*level*/) {
+  Fail("Ablation level can only be applied to ablation rules.");
+}
+
 }  // namespace hyrise

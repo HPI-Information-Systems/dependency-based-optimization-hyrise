@@ -1,4 +1,4 @@
-#include "ucc_validation_rule.hpp"
+#include "ucc_validation_rule_ablation.hpp"
 
 #include "dependency_discovery/validation_strategy/validation_utils.hpp"
 #include "expression/expression_utils.hpp"
@@ -10,9 +10,10 @@
 
 namespace hyrise {
 
-UccValidationRule::UccValidationRule() : AbstractDependencyValidationRule{DependencyType::UniqueColumn} {}
+UccValidationRuleAblation::UccValidationRuleAblation()
+    : AbstractDependencyValidationRule{DependencyType::UniqueColumn} {}
 
-ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandidate& candidate) const {
+ValidationResult UccValidationRuleAblation::_on_validate(const AbstractDependencyCandidate& candidate) const {
   const auto& ucc_candidate = static_cast<const UccCandidate&>(candidate);
 
   auto status = ValidationStatus::Uncertain;
@@ -23,14 +24,19 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
-    const auto& column_statistics = ValidationUtils<ColumnDataType>::collect_column_statistics(table, column_id, true);
-    if (column_statistics.all_segments_dictionary) {
-      if (!column_statistics.all_segments_unique) {
-        status = ValidationStatus::Invalid;
-        return;
-      } else if (column_statistics.segments_disjoint) {
-        status = ValidationStatus::Valid;
-        return;
+    if (!_skip_index || !_skip_dictionaries) {
+      const auto& column_statistics =
+          ValidationUtils<ColumnDataType>::collect_column_statistics(table, column_id, true);
+      if (column_statistics.all_segments_dictionary) {
+        if (!_skip_dictionaries && !column_statistics.all_segments_unique) {
+          status = ValidationStatus::Invalid;
+          return;
+        }
+
+        if (!_skip_index && column_statistics.all_segments_unique && column_statistics.segments_disjoint) {
+          status = ValidationStatus::Valid;
+          return;
+        }
       }
     }
 
@@ -52,8 +58,8 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
 }
 
 template <typename ColumnDataType>
-bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<Table>& table,
-                                                          const ColumnID column_id) {
+bool UccValidationRuleAblation::_uniqueness_holds_across_segments(const std::shared_ptr<Table>& table,
+                                                                  const ColumnID column_id) const {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
   auto distinct_values = ValidationSet<ColumnDataType>(table->row_count());
@@ -70,16 +76,23 @@ bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<
 
     const auto expected_distinct_value_count = distinct_values.size() + source_segment->size();
 
-    if (const auto& value_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment)) {
-      // Directly insert all values.
-      const auto& values = value_segment->values();
-      distinct_values.insert(values.cbegin(), values.cend());
-    } else if (const auto& dictionary_segment =
-                   std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
-      // Directly insert dictionary entries.
-      const auto& dictionary = dictionary_segment->dictionary();
-      distinct_values.insert(dictionary->cbegin(), dictionary->cend());
-    } else {
+    auto inserted = false;
+    if (!_skip_bulk_insert) {
+      if (const auto& value_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment)) {
+        // Directly insert all values.
+        const auto& values = value_segment->values();
+        distinct_values.insert(values.cbegin(), values.cend());
+        inserted = true;
+      } else if (const auto& dictionary_segment =
+                     std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
+        // Directly insert dictionary entries.
+        const auto& dictionary = dictionary_segment->dictionary();
+        distinct_values.insert(dictionary->cbegin(), dictionary->cend());
+        inserted = true;
+      }
+    }
+
+    if (!inserted) {
       // Fallback: Iterate the whole segment and decode its values.
       auto distinct_value_count = distinct_values.size();
       segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
@@ -105,4 +118,12 @@ bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<
 
   return true;
 }
+
+void UccValidationRuleAblation::apply_ablation_level(const AblationLevel level) {
+  // CandidateDependence, IndProbeDictionary, IndUniqueness, IndContinuousness, OdSampling, OdIndex, UccBulkInsert, UccDictionary, UccIndex
+  _skip_bulk_insert = level < AblationLevel::UccBulkInsert;
+  _skip_dictionaries = level < AblationLevel::UccDictionary;
+  _skip_index = level < AblationLevel::UccIndex;
+}
+
 }  // namespace hyrise

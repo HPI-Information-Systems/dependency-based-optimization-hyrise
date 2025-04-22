@@ -149,7 +149,9 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     auto ind_candidate = std::make_shared<IndCandidate>(
         other_stored_table_node->table_name, join_key_column_expression->original_column_id,
         stored_table_node.table_name, join_lqp_column_expression->original_column_id);
-    ind_candidate->dependents->emplace(od_candidate);
+    if (!_skip_dependence) {
+      ind_candidate->dependents->emplace(od_candidate);
+    }
 
     od_candidates.emplace_back(ind_candidate);
 
@@ -159,7 +161,7 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
   if (predicate_count == 1 && !od_candidates.empty()) {
     for (const auto& candidate : od_candidates) {
       const auto [it, inserted] = candidates.emplace(candidate);
-      if (candidate->type != DependencyType::Inclusion) {
+      if (_skip_dependence || candidate->type != DependencyType::Inclusion) {
         continue;
       }
       const auto& ind_candidate = static_cast<const IndCandidate&>(*candidate);

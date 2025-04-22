@@ -1,4 +1,4 @@
-#include "od_validation_rule.hpp"
+#include "od_validation_rule_ablation.hpp"
 
 #include <numeric>
 #include <random>
@@ -18,7 +18,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
-std::vector<size_t> sort_permutation(const std::vector<T>& values) {
+std::vector<size_t> a_sort_permutation(const std::vector<T>& values) {
   auto permutation = std::vector<size_t>(values.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.
   std::iota(permutation.begin(), permutation.end(), 0);
@@ -28,7 +28,7 @@ std::vector<size_t> sort_permutation(const std::vector<T>& values) {
 }
 
 template <typename T>
-std::vector<T> apply_permutation(std::vector<T>& values, const std::vector<size_t>& permutation) {
+std::vector<T> a_apply_permutation(std::vector<T>& values, const std::vector<size_t>& permutation) {
   auto sorted_values = std::vector<T>(values.size());
 
   std::transform(permutation.begin(), permutation.end(), sorted_values.begin(),
@@ -37,8 +37,8 @@ std::vector<T> apply_permutation(std::vector<T>& values, const std::vector<size_
 }
 
 template <typename T>
-bool fill_sample_consecutive(const std::shared_ptr<const Table>& table, const ColumnID column_id,
-                             const uint64_t sample_size, std::vector<T>& values) {
+bool a_fill_sample_consecutive(const std::shared_ptr<const Table>& table, const ColumnID column_id,
+                               const uint64_t sample_size, std::vector<T>& values) {
   const auto chunk_count = table->chunk_count();
   auto row_count = uint64_t{1};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -79,9 +79,9 @@ bool fill_sample_consecutive(const std::shared_ptr<const Table>& table, const Co
 }
 
 template <typename OrderingType, typename OrderedType>
-bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID ordering_column_id,
-                    const ColumnID ordered_column_id, const uint64_t row_count) {
-  const auto sample_size = std::min(row_count, OdValidationRule::SAMPLE_SIZE);
+bool a_sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID ordering_column_id,
+                      const ColumnID ordered_column_id, const uint64_t row_count) {
+  const auto sample_size = std::min(row_count, OdValidationRuleAblation::SAMPLE_SIZE);
 
   auto ordering_sample_values = std::vector<OrderingType>{};
   auto ordered_sample_values = std::vector<OrderedType>{};
@@ -89,12 +89,12 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
   ordered_sample_values.reserve(sample_size);
 
   // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample is likely slower).
-  // if (row_count < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE) {
-  if (!fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
-      !fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
+  // if (row_count < OdValidationRuleAblation::MIN_SIZE_FOR_RANDOM_SAMPLE) {
+  if (!a_fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
+      !a_fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
     return false;
   }
-  /*} else {
+  /*  } else {
     auto random_rows = std::unordered_set<size_t>{sample_size};
     auto generator = std::mt19937{1337};
     auto distribution = std::uniform_int_distribution<size_t>{0, row_count - 1};
@@ -104,7 +104,7 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
 
     auto performance_warning_disabler = PerformanceWarningDisabler{};
     for (const auto random_row : random_rows) {
-    // for (auto random_row = uint64_t{0}; random_row < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE; ++random_row) {
+      // for (auto random_row = uint64_t{0}; random_row < OdValidationRuleAblation::MIN_SIZE_FOR_RANDOM_SAMPLE; ++random_row) {
       const auto& random_ordering_value = table->get_value<OrderingType>(ordering_column_id, random_row);
       const auto& random_ordered_value = table->get_value<OrderedType>(ordered_column_id, random_row);
       if (!random_ordering_value || !random_ordered_value) {
@@ -115,8 +115,8 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
     }
   }*/
 
-  const auto& permutation = sort_permutation<OrderingType>(ordering_sample_values);
-  const auto& ordered_values = apply_permutation<OrderedType>(ordered_sample_values, permutation);
+  const auto& permutation = a_sort_permutation<OrderingType>(ordering_sample_values);
+  const auto& ordered_values = a_apply_permutation<OrderedType>(ordered_sample_values, permutation);
   bool is_initialized = false;
   auto last_value = OrderedType{};
   for (const auto& current_value : ordered_values) {
@@ -130,8 +130,8 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
 }
 
 template <typename T>
-bool check_column_sortedness(const std::shared_ptr<const Table> table, const ColumnID column_id,
-                             const ChunkID chunk_count) {
+bool a_check_column_sortedness(const std::shared_ptr<const Table> table, const ColumnID column_id,
+                               const ChunkID chunk_count) {
   auto ordered = true;
   auto is_initialized = false;
   auto last_value = T{};
@@ -168,7 +168,7 @@ bool check_column_sortedness(const std::shared_ptr<const Table> table, const Col
 }
 
 template <typename LhsType, typename RhsType>
-ValidationStatus check_two_column_sortedness(const AbstractSegment& lhs_segment, const AbstractSegment& rhs_segment) {
+ValidationStatus a_check_two_column_sortedness(const AbstractSegment& lhs_segment, const AbstractSegment& rhs_segment) {
   auto status = ValidationStatus::Valid;
   auto is_initialized = false;
   auto lhs_last_value = LhsType{};
@@ -211,9 +211,9 @@ ValidationStatus check_two_column_sortedness(const AbstractSegment& lhs_segment,
 }
 
 template <typename T>
-bool add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id,
-                  std::map<T, SegmentDomainInfo>& index,
-                  typename std::map<T, SegmentDomainInfo>::iterator& previous_it) {
+bool a_add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id,
+                    std::map<T, SegmentDomainInfo>& index,
+                    typename std::map<T, SegmentDomainInfo>::iterator& previous_it) {
   const auto segment_statistics = ValidationUtils<T>::gather_segment_statistics(chunk, column_id);
   const auto& min = *segment_statistics.min;
   const auto& max = *segment_statistics.max;
@@ -262,16 +262,17 @@ bool add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& ch
 
 namespace hyrise {
 
-OdValidationRule::OdValidationRule() : AbstractDependencyValidationRule{DependencyType::Order} {}
+OdValidationRuleAblation::OdValidationRuleAblation() : AbstractDependencyValidationRule{DependencyType::Order} {}
 
-ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidate& candidate) const {
+ValidationResult OdValidationRuleAblation::_on_validate(const AbstractDependencyCandidate& candidate) const {
   const auto& od_candidate = static_cast<const OdCandidate&>(candidate);
 
   const auto& table = Hyrise::get().storage_manager.get_table(od_candidate.table_name);
   const auto ordering_column_id = od_candidate.ordering_column_id;
   const auto ordered_column_id = od_candidate.ordered_column_id;
 
-  auto status = ValidationStatus::Uncertain;
+  auto status = ValidationStatus::Valid;
+  // UNOPT: No sampling. No chunk indexes and sorting of single chunks.
   const auto row_count = table->row_count();
   resolve_data_type(table->column_data_type(ordering_column_id), [&](const auto ordering_data_type_t) {
     using OrderingColumnDataType = typename decltype(ordering_data_type_t)::type;
@@ -279,15 +280,16 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
       using OrderedColumnDataType = typename decltype(ordered_data_type_t)::type;
 
       // Check ordering for sample.
-      const auto ordered = sample_ordered<OrderingColumnDataType, OrderedColumnDataType>(table, ordering_column_id,
-                                                                                         ordered_column_id, row_count);
+      const auto ordered = _skip_sampling ? true
+                                          : a_sample_ordered<OrderingColumnDataType, OrderedColumnDataType>(
+                                                table, ordering_column_id, ordered_column_id, row_count);
       if (!ordered) {
         status = ValidationStatus::Invalid;
         return;
       }
 
       // If sample covers entire table, orderd sample means column ordered.
-      if (row_count <= SAMPLE_SIZE) {
+      if (!_skip_sampling && row_count <= SAMPLE_SIZE) {
         status = ValidationStatus::Valid;
         return;
       }
@@ -295,137 +297,139 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
       status = ValidationStatus::Valid;
       const auto chunk_count = table->chunk_count();
 
-      if (chunk_count == 1) {
-        const auto& chunk = table->get_chunk(ChunkID{0});
-        Assert(chunk, "Did not expect empty table.");
-        const auto& ordering_segment = chunk->get_segment(ordering_column_id);
-        const auto& ordered_segment = chunk->get_segment(ordered_column_id);
+      if (!_skip_index) {
+        if (chunk_count == 1) {
+          const auto& chunk = table->get_chunk(ChunkID{0});
+          Assert(chunk, "Did not expect empty table.");
+          const auto& ordering_segment = chunk->get_segment(ordering_column_id);
+          const auto& ordered_segment = chunk->get_segment(ordered_column_id);
 
-        // We do not need to sort if the LHS segment is already sorted.
-        const auto chunk_status = check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
-            *ordering_segment, *ordered_segment);
-        if (chunk_status == ValidationStatus::Invalid) {
-          status = ValidationStatus::Invalid;
-          return;
-        } else if (chunk_status == ValidationStatus::Valid) {
-          status = ValidationStatus::Valid;
-          return;
-        }
-      } else {
-        // For tables with more chunks, check if we can sort and check chunks individually for result:
-        //   - For each column, domains of segments do not overlap.
-        //   - Order of segments is the same for both columns.
-        auto sort_column_min_max_ordered = std::map<OrderingColumnDataType, SegmentDomainInfo>{};
-        auto check_column_min_max_ordered = std::map<OrderedColumnDataType, SegmentDomainInfo>{};
-
-        // Add all segments of both columns to indexes, abort if there are overlaps.
-        auto sort_column_it = sort_column_min_max_ordered.begin();
-        auto check_column_it = check_column_min_max_ordered.begin();
-        auto both_columns_disjoint = true;
-
-        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          const auto& chunk = table->get_chunk(chunk_id);
-          if (!chunk || chunk->size() == 0) {
-            continue;
-          }
-
-          if (!(add_to_index(chunk_id, chunk, ordering_column_id, sort_column_min_max_ordered, sort_column_it) &&
-                add_to_index(chunk_id, chunk, ordered_column_id, check_column_min_max_ordered, check_column_it))) {
-            both_columns_disjoint = false;
-            break;
-          }
-        }
-
-        if (both_columns_disjoint) {
-          // Check that order of segments is the same. If not, OD cannot hold.
-          sort_column_it = sort_column_min_max_ordered.begin();
-          check_column_it = check_column_min_max_ordered.begin();
-
-          auto left_chunk_id = sort_column_it->second.first;
-          auto right_chunk_id = check_column_it->second.first;
-          auto abort = false;
-
-          while (sort_column_it != sort_column_min_max_ordered.end() &&
-                 check_column_it != check_column_min_max_ordered.end()) {
-            if (left_chunk_id != right_chunk_id) {
-              abort = true;
-              break;
-            }
-
-            while (sort_column_it != sort_column_min_max_ordered.end() &&
-                   sort_column_it->second.first == left_chunk_id) {
-              ++sort_column_it;
-            }
-
-            if (sort_column_it != sort_column_min_max_ordered.end()) {
-              left_chunk_id = sort_column_it->second.first;
-            }
-            while (check_column_it != check_column_min_max_ordered.end() &&
-                   check_column_it->second.first == right_chunk_id) {
-              ++check_column_it;
-            }
-            if (check_column_it != check_column_min_max_ordered.end()) {
-              right_chunk_id = check_column_it->second.first;
-            }
-
-            // Break if sort column segment perfectly continues other segment, but check column segment does not. That
-            // means there are different values in LHS for same in RHS, which breaks OD.
-            if (sort_column_it->second.second == SegmentDomainBound::Max &&
-                check_column_it->second.second != SegmentDomainBound::Max) {
-              abort = true;
-              break;
-            }
-          }
-
-          if (!abort) {
-            Assert(check_column_it == check_column_min_max_ordered.end() ||
-                       std::next(check_column_it) == check_column_min_max_ordered.end(),
-                   "Both indexes should have same size!");
-
-            // Sort chunks individually, abort if any chunk not ordered.
-            const auto& original_column_definitions = table->column_definitions();
-            const auto column_definitions = std::vector{original_column_definitions[ordering_column_id],
-                                                        original_column_definitions[ordered_column_id]};
-            const auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}};
-
-            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-              const auto& chunk = table->get_chunk(chunk_id);
-              if (!chunk || chunk->size() == 0) {
-                continue;
-              }
-
-              const auto& ordering_segment = chunk->get_segment(ordering_column_id);
-              const auto& ordered_segment = chunk->get_segment(ordered_column_id);
-
-              // We do not need to sort if the LHS segment is already sorted.
-              const auto chunk_status = check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
-                  *ordering_segment, *ordered_segment);
-              if (chunk_status == ValidationStatus::Invalid) {
-                status = ValidationStatus::Invalid;
-                return;
-              } else if (chunk_status == ValidationStatus::Valid) {
-                continue;
-              }
-
-              auto segments_to_sort = Segments{ordering_segment, ordered_segment};
-              auto chunk_to_sort = std::make_shared<Chunk>(std::move(segments_to_sort));
-              auto chunks_to_sort = std::vector<std::shared_ptr<Chunk>>{std::move(chunk_to_sort)};
-
-              const auto table_to_sort =
-                  std::make_shared<Table>(column_definitions, TableType::Data, std::move(chunks_to_sort));
-              const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
-              const auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions);
-              table_wrapper->execute();
-              sort->execute();
-              const auto& result_table = sort->get_output();
-
-              if (!check_column_sortedness<OrderedColumnDataType>(result_table, ColumnID{1}, ChunkID{1})) {
-                status = ValidationStatus::Invalid;
-                return;
-              }
-            }
+          // We do not need to sort if the LHS segment is already sorted.
+          const auto chunk_status = a_check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
+              *ordering_segment, *ordered_segment);
+          if (chunk_status == ValidationStatus::Invalid) {
+            status = ValidationStatus::Invalid;
+            return;
+          } else if (chunk_status == ValidationStatus::Valid) {
             status = ValidationStatus::Valid;
             return;
+          }
+        } else {
+          // For tables with more chunks, check if we can sort and check chunks individually for result:
+          //   - For each column, domains of segments do not overlap.
+          //   - Order of segments is the same for both columns.
+          auto sort_column_min_max_ordered = std::map<OrderingColumnDataType, SegmentDomainInfo>{};
+          auto check_column_min_max_ordered = std::map<OrderedColumnDataType, SegmentDomainInfo>{};
+
+          // Add all segments of both columns to indexes, abort if there are overlaps.
+          auto sort_column_it = sort_column_min_max_ordered.begin();
+          auto check_column_it = check_column_min_max_ordered.begin();
+          auto both_columns_disjoint = true;
+
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto& chunk = table->get_chunk(chunk_id);
+            if (!chunk || chunk->size() == 0) {
+              continue;
+            }
+
+            if (!(a_add_to_index(chunk_id, chunk, ordering_column_id, sort_column_min_max_ordered, sort_column_it) &&
+                  a_add_to_index(chunk_id, chunk, ordered_column_id, check_column_min_max_ordered, check_column_it))) {
+              both_columns_disjoint = false;
+              break;
+            }
+          }
+
+          if (both_columns_disjoint) {
+            // Check that order of segments is the same. If not, OD cannot hold.
+            sort_column_it = sort_column_min_max_ordered.begin();
+            check_column_it = check_column_min_max_ordered.begin();
+
+            auto left_chunk_id = sort_column_it->second.first;
+            auto right_chunk_id = check_column_it->second.first;
+            auto abort = false;
+
+            while (sort_column_it != sort_column_min_max_ordered.end() &&
+                   check_column_it != check_column_min_max_ordered.end()) {
+              if (left_chunk_id != right_chunk_id) {
+                abort = true;
+                break;
+              }
+
+              while (sort_column_it != sort_column_min_max_ordered.end() &&
+                     sort_column_it->second.first == left_chunk_id) {
+                ++sort_column_it;
+              }
+
+              if (sort_column_it != sort_column_min_max_ordered.end()) {
+                left_chunk_id = sort_column_it->second.first;
+              }
+              while (check_column_it != check_column_min_max_ordered.end() &&
+                     check_column_it->second.first == right_chunk_id) {
+                ++check_column_it;
+              }
+              if (check_column_it != check_column_min_max_ordered.end()) {
+                right_chunk_id = check_column_it->second.first;
+              }
+
+              // Break if sort column segment perfectly continues other segment, but check column segment does not. That
+              // means there are different values in LHS for same in RHS, which breaks OD.
+              if (sort_column_it->second.second == SegmentDomainBound::Max &&
+                  check_column_it->second.second != SegmentDomainBound::Max) {
+                abort = true;
+                break;
+              }
+            }
+
+            if (!abort) {
+              Assert(check_column_it == check_column_min_max_ordered.end() ||
+                         std::next(check_column_it) == check_column_min_max_ordered.end(),
+                     "Both indexes should have same size!");
+
+              // Sort chunks individually, abort if any chunk not ordered.
+              const auto& original_column_definitions = table->column_definitions();
+              const auto column_definitions = std::vector{original_column_definitions[ordering_column_id],
+                                                          original_column_definitions[ordered_column_id]};
+              const auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}};
+
+              for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+                const auto& chunk = table->get_chunk(chunk_id);
+                if (!chunk || chunk->size() == 0) {
+                  continue;
+                }
+
+                const auto& ordering_segment = chunk->get_segment(ordering_column_id);
+                const auto& ordered_segment = chunk->get_segment(ordered_column_id);
+
+                // We do not need to sort if the LHS segment is already sorted.
+                const auto chunk_status = a_check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
+                    *ordering_segment, *ordered_segment);
+                if (chunk_status == ValidationStatus::Invalid) {
+                  status = ValidationStatus::Invalid;
+                  return;
+                } else if (chunk_status == ValidationStatus::Valid) {
+                  continue;
+                }
+
+                auto segments_to_sort = Segments{ordering_segment, ordered_segment};
+                auto chunk_to_sort = std::make_shared<Chunk>(std::move(segments_to_sort));
+                auto chunks_to_sort = std::vector<std::shared_ptr<Chunk>>{std::move(chunk_to_sort)};
+
+                const auto table_to_sort =
+                    std::make_shared<Table>(column_definitions, TableType::Data, std::move(chunks_to_sort));
+                const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
+                const auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions);
+                table_wrapper->execute();
+                sort->execute();
+                const auto& result_table = sort->get_output();
+
+                if (!a_check_column_sortedness<OrderedColumnDataType>(result_table, ColumnID{1}, ChunkID{1})) {
+                  status = ValidationStatus::Invalid;
+                  return;
+                }
+              }
+              status = ValidationStatus::Valid;
+              return;
+            }
           }
         }
       }
@@ -454,7 +458,8 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
       sort->execute();
       const auto& result_table = sort->get_output();
 
-      if (!check_column_sortedness<OrderedColumnDataType>(result_table, check_column_id, result_table->chunk_count())) {
+      if (!a_check_column_sortedness<OrderedColumnDataType>(result_table, check_column_id,
+                                                            result_table->chunk_count())) {
         status = ValidationStatus::Invalid;
       }
     });
@@ -466,6 +471,12 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
   }
 
   return result;
+}
+
+void OdValidationRuleAblation::apply_ablation_level(const AblationLevel level) {
+  // CandidateDependence, IndProbeDictionary, IndUniqueness, IndContinuousness, OdSampling, OdIndex, UccBulkInsert, UccDictionary, UccIndex
+  _skip_sampling = level < AblationLevel::OdSampling;
+  _skip_index = level < AblationLevel::OdIndex;
 }
 
 }  // namespace hyrise

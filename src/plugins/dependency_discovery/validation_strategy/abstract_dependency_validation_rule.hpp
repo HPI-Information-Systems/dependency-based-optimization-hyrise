@@ -28,6 +28,8 @@ class AbstractDependencyValidationRule {
 
   ValidationResult validate(const AbstractDependencyCandidate& candidate) const;
 
+  virtual void apply_ablation_level(const AblationLevel level);
+
   const DependencyType dependency_type;
 
  protected:

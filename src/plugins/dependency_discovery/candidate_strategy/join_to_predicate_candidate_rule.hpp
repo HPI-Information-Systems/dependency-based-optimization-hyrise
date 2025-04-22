@@ -10,6 +10,10 @@ class JoinToPredicateCandidateRule : public AbstractDependencyCandidateRule {
 
   void apply_to_node(const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                      DependencyCandidates& candidates) const final;
+
+ protected:
+  friend class DependencyDiscoveryPlugin;
+  bool _skip_dependence{false};
 };
 
 }  // namespace hyrise

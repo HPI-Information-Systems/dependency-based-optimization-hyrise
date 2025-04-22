@@ -62,6 +62,10 @@ std::vector<ColumnID> sort_fd_candidate_columns(const std::string& table_name,
 
 namespace hyrise {
 
+std::ostream& operator<<(std::ostream& stream, const AblationLevel level) {
+  return stream << magic_enum::enum_name(level);
+}
+
 // AbstractDependencyCandidate
 AbstractDependencyCandidate::AbstractDependencyCandidate(const DependencyType init_type) : type{init_type} {}
 

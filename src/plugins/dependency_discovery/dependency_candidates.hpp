@@ -2,6 +2,11 @@
 
 #include <unordered_set>
 
+#include <abseil/absl/container/flat_hash_set.h>
+#include <boost/unordered/unordered_flat_set.hpp>
+#include <boost/unordered/unordered_node_set.hpp>
+#include "unordered_dense/include/ankerl/unordered_dense.h"
+
 #include "types.hpp"
 
 namespace hyrise {
@@ -13,6 +18,29 @@ namespace hyrise {
 enum class DependencyType { Order, Inclusion, UniqueColumn, Functional };
 
 enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown, Superfluous };
+
+template <class T>
+using ValidationSet = std::unordered_set<T>;
+// using ValidationSet = boost::unordered_flat_set<T>;
+// using ValidationSet = boost::unordered_node_set<T>;
+// using ValidationSet = absl::flat_hash_set<T>;
+// using ValidationSet = ankerl::unordered_dense::set<T>;
+
+enum class AblationLevel {
+  None,
+  CandidateDependence,
+  IndMinMax,
+  IndProbeDictionary,
+  IndUniqueness,
+  IndContinuousness,
+  OdSampling,
+  OdIndex,
+  UccDictionary,
+  UccBulkInsert,
+  UccIndex
+};
+
+std::ostream& operator<<(std::ostream& stream, const AblationLevel level);
 
 class AbstractDependencyCandidate : public Noncopyable {
  public:

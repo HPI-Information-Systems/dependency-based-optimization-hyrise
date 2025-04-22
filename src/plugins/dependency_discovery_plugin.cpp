@@ -9,11 +9,16 @@
 #include "dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp"
 #include "dependency_discovery/validation_strategy/fd_validation_rule.hpp"
+#include "dependency_discovery/validation_strategy/fd_validation_rule_ablation.hpp"
 #include "dependency_discovery/validation_strategy/ind_validation_rule.hpp"
+#include "dependency_discovery/validation_strategy/ind_validation_rule_ablation.hpp"
 #include "dependency_discovery/validation_strategy/od_validation_rule.hpp"
+#include "dependency_discovery/validation_strategy/od_validation_rule_ablation.hpp"
 #include "dependency_discovery/validation_strategy/ucc_validation_rule.hpp"
+#include "dependency_discovery/validation_strategy/ucc_validation_rule_ablation.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -43,6 +48,20 @@ void add_constraint(const std::shared_ptr<Table>& table, const std::shared_ptr<A
 namespace hyrise {
 
 DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
+  auto ablation_level = std::optional<AblationLevel>{};
+  const auto perform_level = std::getenv("ABLATION_LEVEL");
+  if (perform_level) {
+    ablation_level = magic_enum::enum_cast<AblationLevel>(std::string{perform_level});
+    Assert(ablation_level, "Invalid ablation level: " + std::string{perform_level});
+    std::cout << "- Perform validation with ablation level " << *ablation_level << "\n";
+  }
+
+  const auto perform_ablation = std::getenv("PERFORM_ABLATION");
+  if (perform_ablation && !std::strcmp(perform_ablation, "1")) {
+    std::cout << "- Perform validation ablation" << std::endl;
+    _ablation = true;
+  }
+
   const auto allow_dependent_groupby = std::getenv("DEPENDENT_GROUPBY");
   if (!allow_dependent_groupby || !std::strcmp(allow_dependent_groupby, "1")) {
     std::cout << "- Enable Dependent Group-by Reduction" << std::endl;
@@ -58,7 +77,11 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
   const auto allow_join_to_predicate = std::getenv("JOIN_TO_PREDICATE");
   if (!allow_join_to_predicate || !std::strcmp(allow_join_to_predicate, "1")) {
     std::cout << "- Enable Join to Predicate" << std::endl;
-    _add_candidate_rule(std::make_unique<JoinToPredicateCandidateRule>());
+    auto rule = std::make_unique<JoinToPredicateCandidateRule>();
+    if (ablation_level && *ablation_level == AblationLevel::None) {
+      rule->_skip_dependence = true;
+    }
+    _add_candidate_rule(std::move(rule));
   }
 
   const auto allow_join_avoidance = std::getenv("JOIN_AVOIDANCE");
@@ -67,21 +90,29 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
     _add_candidate_rule(std::make_unique<JoinAvoidanceCandidateRule>());
   }
 
-  _add_validation_rule(std::make_unique<UccValidationRule>());
-  _add_validation_rule(std::make_unique<OdValidationRule>());
-  _add_validation_rule(std::make_unique<IndValidationRule>());
-  _add_validation_rule(std::make_unique<FdValidationRule>());
+  if (perform_ablation || ablation_level) {
+    _add_validation_rule(std::make_unique<UccValidationRuleAblation>());
+    _add_validation_rule(std::make_unique<OdValidationRuleAblation>());
+    _add_validation_rule(std::make_unique<IndValidationRuleAblation>());
+    _add_validation_rule(std::make_unique<FdValidationRuleAblation>());
+  } else {
+    _add_validation_rule(std::make_unique<UccValidationRule>());
+    _add_validation_rule(std::make_unique<OdValidationRule>());
+    _add_validation_rule(std::make_unique<IndValidationRule>());
+    _add_validation_rule(std::make_unique<FdValidationRule>());
+  }
+
+  if (ablation_level) {
+    for (const auto& [_, rule] : _validation_rules) {
+      rule->apply_ablation_level(*ablation_level);
+    }
+  }
 
   const auto loop_count = std::getenv("VALIDATION_LOOPS");
   if (loop_count) {
     const auto requested_repetitions = std::atol(loop_count);
     Assert(requested_repetitions > 0, "Validation must be executed at least once!");
     _validation_repetitions = static_cast<uint32_t>(requested_repetitions);
-    if (_validation_repetitions > 1) {
-      const auto allow_constraints = std::getenv("SCHEMA_CONSTRAINTS");
-      Assert(allow_constraints && !std::strcmp(allow_constraints, "0"),
-             "Looping validation only permitted if no schema constraints are added as it resets all constrints.");
-    }
   }
   std::cout << "- Execute " << _validation_repetitions << " validation run(s)" << std::endl;
 }
@@ -101,11 +132,18 @@ DependencyDiscoveryPlugin::provided_user_executable_functions() {
 
 std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() {
   return [&](auto& benchmark_item_runner) {
+    const auto old_scheduler = Hyrise::get().scheduler();
+    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
     for (const auto item_id : benchmark_item_runner.items()) {
       benchmark_item_runner.execute_item(item_id);
     }
+    Hyrise::get().set_scheduler(old_scheduler);
 
-    _discover_dependencies();
+    if (!_ablation) {
+      _discover_dependencies();
+    } else {
+      _perform_ablation();
+    }
 
     for (const auto& log_entry : Hyrise::get().log_manager.log_entries()) {
       std::cout << log_entry.message << std::endl;
@@ -119,12 +157,41 @@ void DependencyDiscoveryPlugin::_discover_dependencies() const {
   _validate_dependency_candidates(_identify_dependency_candidates());
 
   auto message = std::stringstream{};
-  message << "Executed dependency discovery in " << discovery_timer.lap_formatted();
+  const auto discomery_time = discovery_timer.lap();
+  message << "Executed dependency discovery in " << format_duration(discomery_time) << " (" << discomery_time << ")";
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
   Hyrise::get().log_manager.add_message(
       "DependencyDiscoveryPlugin", "Cleared LQP and PQP caches in " + discovery_timer.lap_formatted(), LogLevel::Info);
+}
+
+void DependencyDiscoveryPlugin::_perform_ablation() {
+  JoinToPredicateCandidateRule* join_to_pred_rule = nullptr;
+  for (const auto& [node_type, rules] : _candidate_rules) {
+    if (node_type != LQPNodeType::Join) {
+      continue;
+    }
+    for (const auto& rule : rules) {
+      if (auto* join_to_predicate_rule = dynamic_cast<JoinToPredicateCandidateRule*>(rule.get())) {
+        join_to_pred_rule = join_to_predicate_rule;
+        break;
+      }
+    }
+  }
+  Assert(join_to_pred_rule, "Expected JoinToPredicateCandidateRule");
+
+  for (const auto& [level, level_name] : magic_enum::enum_entries<AblationLevel>()) {
+    Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin",
+                                          "Perform validation with ablation level " + std::string{level_name},
+                                          LogLevel::Info);
+    _clear_constraints();
+    join_to_pred_rule->_skip_dependence = level == AblationLevel::None;
+    for (const auto& [_, rule] : _validation_rules) {
+      rule->apply_ablation_level(level);
+    }
+    _validate_dependency_candidates(_identify_dependency_candidates());
+  }
 }
 
 DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates() const {
@@ -143,7 +210,7 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
 
     auto loop_timer = Timer{};
     // Get a snapshot of the current LQP cache to work on all currently cached queries.
-    const auto& snapshot = Hyrise::get().default_lqp_cache->snapshot();
+    const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
 
     for (const auto& [_, entry] : snapshot) {
       const auto& root_node = entry.value;
@@ -168,7 +235,8 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
 
   const auto generation_time = loop_times / _validation_repetitions;
   auto message = std::stringstream{};
-  message << "Generated " << dependency_candidates.size() << " candidates in " << format_duration(generation_time);
+  message << "Generated " << dependency_candidates.size() << " candidates in " << format_duration(generation_time)
+          << " (" << generation_time << ")";
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   return dependency_candidates;
 }
@@ -195,11 +263,9 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
         candidate->status = ValidationStatus::Uncertain;
       }
 
-      for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
-        table->_table_key_constraints.clear();
-        table->_table_order_constraints.clear();
-        table->_foreign_key_constraints.clear();
-        table->_referenced_foreign_key_constraints.clear();
+      _clear_constraints();
+      if (Hyrise::get().add_constraints) {
+        Hyrise::get().add_constraints();
       }
     }
 
@@ -258,16 +324,18 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
 
     switch (candidate->status) {
       case ValidationStatus::Invalid:
-        message << " [rejected in " << format_duration(mean_candidate_time) << "]";
+        message << " [rejected in " << format_duration(mean_candidate_time) << " (" << mean_candidate_time << ")]";
         break;
       case ValidationStatus::AlreadyKnown:
-        message << " [skipped (already known) in " << format_duration(mean_candidate_time) << "]";
+        message << " [skipped (already known) in " << format_duration(mean_candidate_time) << " ("
+                << mean_candidate_time << ")]";
         break;
       case ValidationStatus::Valid:
-        message << " [confirmed in " << format_duration(mean_candidate_time) << "]";
+        message << " [confirmed in " << format_duration(mean_candidate_time) << " (" << mean_candidate_time << ")]";
         break;
       case ValidationStatus::Superfluous:
-        message << " [skipped (not required anymore) in " << format_duration(mean_candidate_time) << "]";
+        message << " [skipped (not required anymore) in " << format_duration(mean_candidate_time) << " ("
+                << mean_candidate_time << ")]";
         break;
       case ValidationStatus::Uncertain:
         Fail("Expected explicit validation result for " + candidate->description());
@@ -280,7 +348,8 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
   auto message = std::stringstream{};
   const auto validation_time = loop_times / _validation_repetitions;
   message << "Validated " << dependency_candidates.size() << " candidates (" << valid_count << " valid, "
-          << invalid_count << " invalid, " << skipped_count << " superfluous) in " << format_duration(validation_time);
+          << invalid_count << " invalid, " << skipped_count << " superfluous) in " << format_duration(validation_time)
+          << " (" << validation_time << ")";
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
 }
 
@@ -290,6 +359,15 @@ void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDepe
 
 void DependencyDiscoveryPlugin::_add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule) {
   _validation_rules[rule->dependency_type] = std::move(rule);
+}
+
+void DependencyDiscoveryPlugin::_clear_constraints() {
+  for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
+    table->_table_key_constraints.clear();
+    table->_table_order_constraints.clear();
+    table->_foreign_key_constraints.clear();
+    table->_referenced_foreign_key_constraints.clear();
+  }
 }
 
 EXPORT_PLUGIN(DependencyDiscoveryPlugin);

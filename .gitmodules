@@ -40,10 +40,6 @@
 [submodule "third_party/magic_enum"]
 	path = third_party/magic_enum
 	url = https://github.com/Neargye/magic_enum.git
-[submodule "third_party/nlohmann_json"]
-	path = third_party/nlohmann_json
-	url = https://github.com/nlohmann/json.git
-	shallow = true
 [submodule "third_party/robin-map"]
 	path = third_party/robin-map
 	url = https://github.com/Tessil/robin-map.git
@@ -74,3 +70,8 @@
 [submodule "third_party/abseil"]
 	path = third_party/abseil
 	url = https://github.com/abseil/abseil-cpp
+[submodule "third_party/nlohmann_json"]
+	path = third_party/nlohmann_json
+	url = https://github.com/nlohmann/json
+	branch = master
+	shallow = true
